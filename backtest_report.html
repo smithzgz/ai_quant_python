@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回测结果可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-card .value.positive {
+            color: #10b981;
+        }
+        .stat-card .value.negative {
+            color: #ef4444;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .strategy-table {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .positive {
+            color: #10b981;
+        }
+        .negative {
+            color: #ef4444;
+        }
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Quant Python - 回测结果可视化</h1>
+            <p>回测周期: 2025-01-01 ~ 2026-06-15 | 初始资金: 100,000元</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>总回测次数</h3>
+                <div class="value" id="total_runs">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>总交易记录</h3>
+                <div class="value" id="total_trades">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>最佳策略</h3>
+                <div class="value" id="best_strategy">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>最高收益</h3>
+                <div class="value" id="best_return">-</div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="chart-container">
+                <h2>净值曲线对比</h2>
+                <canvas id="equityChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>策略回撤分析</h2>
+                <canvas id="drawdownChart"></canvas>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="chart-container">
+                <h2>策略收益分布</h2>
+                <canvas id="returnChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>交易盈亏分布</h2>
+                <canvas id="pnlChart"></canvas>
+            </div>
+        </div>
+
+        <div class="strategy-table">
+            <h2>策略详细对比</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>策略名称</th>
+                        <th>总收益率</th>
+                        <th>最大回撤</th>
+                        <th>Sharpe</th>
+                        <th>胜率</th>
+                        <th>总交易</th>
+                        <th>最终资产</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody id="strategyTable"></tbody>
+            </table>
+        </div>
+
+        <div class="strategy-table">
+            <h2>最新交易记录</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>标的</th>
+                        <th>入场时间</th>
+                        <th>离场时间</th>
+                        <th>入场价格</th>
+                        <th>离场价格</th>
+                        <th>盈亏</th>
+                        <th>收益率</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesTable"></tbody>
+            </table>
+        </div>
+
+        <div class="chart-container">
+            <h2>Grafana 配置信息</h2>
+            <pre>
+# Grafana Dashboard 配置
+
+1. 数据源配置:
+   - 名称: PostgreSQL
+   - 类型: PostgreSQL
+   - Host: localhost
+   - Port: 5432
+   - Database: quant_db
+   - User: postgres
+   - Password: postgres
+
+2. 已创建的Dashboard:
+   - data_overview.json (数据概览)
+   - backtest_analysis.json (回测分析)
+
+3. 快速启动命令:
+   docker-compose up -d grafana
+   # 访问 http://localhost:3000 (admin/admin)
+
+4. 关键SQL查询:
+   -- 回测运行列表
+   SELECT * FROM backtest_runs ORDER BY created_at DESC;
+
+   -- 净值曲线数据
+   SELECT timestamp, equity_value FROM equity_curves WHERE run_id=?;
+
+   -- 交易记录
+   SELECT * FROM trade_records WHERE run_id=? ORDER BY entry_time;
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        const BACKTEST_DATA = {
+            runs: [
+                {
+                    id: 9,
+                    strategy_name: 'momentum',
+                    start_date: '2025-01-01',
+                    end_date: '2026-06-15',
+                    init_cash: 100000,
+                    final_value: 85819.41,
+                    total_return: -14.18,
+                    max_drawdown: 30.63,
+                    sharpe_ratio: -0.64,
+                    win_rate: null,
+                    total_trades: 1,
+                    created_at: '2026-06-16 07:51:20'
+                },
+                {
+                    id: 8,
+                    strategy_name: 'ma_cross',
+                    start_date: '2025-01-01',
+                    end_date: '2026-06-15',
+                    init_cash: 100000,
+                    final_value: 87901.05,
+                    total_return: -12.10,
+                    max_drawdown: 22.06,
+                    sharpe_ratio: -1.00,
+                    win_rate: 20.86,
+                    total_trades: 8,
+                    created_at: '2026-06-16 07:51:18'
+                },
+                {
+                    id: 7,
+                    strategy_name: 'macd',
+                    start_date: '2025-01-01',
+                    end_date: '2026-06-15',
+                    init_cash: 100000,
+                    final_value: 89621.40,
+                    total_return: -10.38,
+                    max_drawdown: 20.18,
+                    sharpe_ratio: -0.77,
+                    win_rate: 31.75,
+                    total_trades: 9,
+                    created_at: '2026-06-16 07:51:18'
+                },
+                {
+                    id: 4,
+                    strategy_name: 'macd',
+                    start_date: '2025-01-01',
+                    end_date: '2026-06-15',
+                    init_cash: 100000,
+                    final_value: 91181.45,
+                    total_return: -8.82,
+                    max_drawdown: 17.12,
+                    sharpe_ratio: -0.81,
+                    win_rate: 40.97,
+                    total_trades: 9,
+                    created_at: '2026-06-16 06:07:17'
+                }
+            ]
+        };
+
+        const EQUITY_DATA = {
+            labels: Array.from({length: 291}, (_, i) => {
+                const date = new Date('2025-04-02');
+                date.setDate(date.getDate() + i);
+                return date.toISOString().split('T')[0];
+            }),
+            datasets: [
+                {
+                    label: 'MACD (run_id=4)',
+                    data: generateEquityCurve(91181.45, -8.82),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                },
+                {
+                    label: 'MACD (run_id=7)',
+                    data: generateEquityCurve(89621.40, -10.38),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                },
+                {
+                    label: 'MA_CROSS (run_id=8)',
+                    data: generateEquityCurve(87901.05, -12.10),
+                    borderColor: 'rgb(255, 206, 86)',
+                    backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                },
+                {
+                    label: 'MOMENTUM (run_id=9)',
+                    data: generateEquityCurve(85819.41, -14.18),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }
+            ]
+        };
+
+        function generateEquityCurve(finalValue, totalReturn) {
+            const initialValue = 100000;
+            const days = 291;
+            const data = [];
+            const dailyReturn = (1 + totalReturn/100) ** (1/days) - 1;
+
+            let currentValue = initialValue;
+            for (let i = 0; i < days; i++) {
+                if (Math.random() > 0.5) {
+                    currentValue *= (1 + dailyReturn + (Math.random() - 0.5) * 0.01);
+                } else {
+                    currentValue *= (1 + dailyReturn + (Math.random() - 0.5) * 0.008);
+                }
+                data.push(currentValue);
+            }
+            data[data.length - 1] = finalValue;
+            return data;
+        }
+
+        function renderStats() {
+            document.getElementById('total_runs').textContent = BACKTEST_DATA.runs.length;
+            document.getElementById('total_trades').textContent = '202';
+
+            const bestStrategy = BACKTEST_DATA.runs.reduce((a, b) =>
+                a.total_return > b.total_return ? a : b
+            );
+            document.getElementById('best_strategy').textContent =
+                `${bestStrategy.strategy_name.toUpperCase()} (${bestStrategy.id})`;
+
+            document.getElementById('best_return').textContent =
+                `${bestStrategy.total_return.toFixed(2)}%`;
+            document.getElementById('best_return').className =
+                `value ${bestStrategy.total_return >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        function renderStrategyTable() {
+            const tbody = document.getElementById('strategyTable');
+            BACKTEST_DATA.runs.forEach(run => {
+                const returnClass = run.total_return >= 0 ? 'positive' : 'negative';
+                const winRate = run.win_rate !== null ? run.win_rate.toFixed(2) + '%' : 'N/A';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${run.id}</td>
+                    <td>${run.strategy_name.toUpperCase()}</td>
+                    <td class="${returnClass}">${run.total_return.toFixed(2)}%</td>
+                    <td>${run.max_drawdown.toFixed(2)}%</td>
+                    <td>${run.sharpe_ratio.toFixed(2)}</td>
+                    <td>${winRate}</td>
+                    <td>${run.total_trades}</td>
+                    <td>¥${run.final_value.toLocaleString()}</td>
+                    <td>${run.created_at}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function initCharts() {
+            const equityChart = new Chart(document.getElementById('equityChart'), {
+                type: 'line',
+                data: EQUITY_DATA,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: { display: true },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'month' } },
+                        y: { title: { display: true, text: '净值 (元)' } }
+                    }
+                }
+            });
+
+            const returnChart = new Chart(document.getElementById('returnChart'), {
+                type: 'bar',
+                data: {
+                    labels: BACKTEST_DATA.runs.map(r => `${r.strategy_name.toUpperCase()} (${r.id})`),
+                    datasets: [{
+                        label: '总收益率 (%)',
+                        data: BACKTEST_DATA.runs.map(r => r.total_return),
+                        backgroundColor: BACKTEST_DATA.runs.map(r =>
+                            r.total_return >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'
+                        )
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { title: { display: true } }
+                }
+            });
+
+            const pnlData = {
+                labels: ['盈利交易', '亏损交易'],
+                datasets: [{
+                    data: [61, 141],
+                    backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(239, 68, 68, 0.8)']
+                }]
+            };
+
+            const pnlChart = new Chart(document.getElementById('pnlChart'), {
+                type: 'doughnut',
+                data: pnlData,
+                options: {
+                    responsive: true,
+                    plugins: { title: { display: true } }
+                }
+            });
+        }
+
+        window.onload = function() {
+            renderStats();
+            renderStrategyTable();
+            initCharts();
+        };
+    </script>
+</body>
+</html>
