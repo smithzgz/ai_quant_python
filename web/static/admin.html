@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Quant Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1117;color:#e1e4e8;font-size:14px}
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:600;color:#f0f6fc}
+.header .version{color:#8b949e;font-size:12px}
+.container{max-width:1400px;margin:0 auto;padding:20px 24px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px 20px}
+.stat-card .label{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:28px;font-weight:700;margin-top:4px;color:#f0f6fc}
+.stat-card .value.success{color:#3fb950}
+.stat-card .value.failed{color:#f85149}
+.stat-card .value.running{color:#d29922}
+table{width:100%;border-collapse:collapse;background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden}
+th{background:#1c2128;color:#8b949e;font-weight:600;text-align:left;padding:10px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #30363d}
+td{padding:10px 14px;border-bottom:1px solid #21262d;color:#e1e4e8}
+tr:hover td{background:#1c2128}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge.success{background:#1b3a2a;color:#3fb950}
+.badge.failed{background:#3d1a1e;color:#f85149}
+.badge.running{background:#3d2e00;color:#d29922}
+.badge.idle{background:#1c2128;color:#8b949e}
+.badge.queued{background:#1a1e3a;color:#58a6ff}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e1e4e8;cursor:pointer;font-size:12px;transition:all .15s}
+.btn:hover{background:#30363d;border-color:#8b949e}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:#238636;border-color:#238636;color:#fff}
+.btn.primary:hover{background:#2ea043}
+.btn.danger{background:#da3633;border-color:#da3633;color:#fff}
+.btn.danger:hover{background:#f85149}
+.btn.sm{padding:4px 10px;font-size:11px}
+.log-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;line-height:1.6;max-height:500px;overflow-y:auto;white-space:pre-wrap;color:#c9d1d9}
+.log-controls{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.log-controls select,.log-controls input{background:#0d1117;border:1px solid #30363d;color:#e1e4e8;padding:6px 10px;border-radius:6px;font-size:13px}
+.log-controls input{width:300px}
+.empty{text-align:center;padding:40px;color:#8b949e}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;width:90%;max-width:900px;max-height:85vh;overflow-y:auto;padding:24px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header h3{font-size:16px;color:#f0f6fc}
+.modal-close{background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:4px 8px}
+.modal-close:hover{color:#f0f6fc}
+.modal-section{margin-bottom:20px}
+.modal-section h4{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #21262d}
+.detail-row{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.detail-row .dr-label{color:#8b949e;font-size:12px;min-width:80px}
+.detail-row .dr-val{color:#e1e4e8;font-size:13px}
+.detail-row code{background:#0d1117;padding:2px 6px;border-radius:4px;font-size:12px}
+.detail-stats{display:flex;gap:10px;margin-bottom:12px}
+.detail-stat{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 14px}
+.detail-stat .dl{color:#8b949e;font-size:11px}
+.detail-stat .dv{font-size:16px;font-weight:600;margin-top:2px}
+.field-table{font-size:12px;width:100%}
+.field-table td{padding:5px 8px}
+.field-table .pk{color:#d29922;font-weight:600}
+.table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.table-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s}
+.table-card:hover{border-color:#58a6ff;transform:translateY(-1px)}
+.table-card.failed{border-left:3px solid #f85149}
+.table-card .tc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.table-card .tc-name{font-weight:600;color:#f0f6fc;font-size:14px}
+.table-card .tc-cls{font-size:11px;color:#8b949e;background:#21262d;padding:2px 8px;border-radius:10px}
+.table-card .tc-row{display:flex;justify-content:space-between;font-size:12px;color:#8b949e;margin-top:4px}
+.table-card .tc-row .tc-val{color:#e1e4e8}
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-bar input{background:#0d1117;border:1px solid #30363d;color:#e1e4e8;padding:8px 12px;border-radius:6px;font-size:13px;width:250px}
+.filter-bar input::placeholder{color:#484f58}
+.cls-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.cls-tab{padding:6px 14px;border-radius:16px;border:1px solid #30363d;background:#161b22;color:#8b949e;cursor:pointer;font-size:12px;transition:all .15s}
+.cls-tab:hover{border-color:#58a6ff;color:#e1e4e8}
+.cls-tab.active{background:#1f6feb;border-color:#1f6feb;color:#fff}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>AI Quant Admin</h1>
+  <span class="version">v1.0.0</span>
+</div>
+<div class="container">
+  <div class="stats" id="stats-cards"></div>
+  <div class="filter-bar">
+    <input id="dash-search" placeholder="Search table name..." oninput="filterDashboard()">
+  </div>
+  <div class="cls-tabs" id="cls-tabs"></div>
+  <div class="table-grid" id="table-grid"></div>
+</div>
+
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="dm-title"></h3>
+      <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    </div>
+    <div class="modal-section">
+      <div class="detail-row"><span class="dr-label">API</span><code id="dm-api"></code></div>
+      <div class="detail-row"><span class="dr-label">Mode</span><span class="dr-val" id="dm-mode"></span></div>
+      <div class="detail-row"><span class="dr-label">Schedule</span><code id="dm-schedule"></code></div>
+      <div class="detail-row"><span class="dr-label">Checkpoint</span><span class="dr-val" id="dm-cp"></span></div>
+    </div>
+    <div class="modal-section">
+      <h4>Sync Control</h4>
+      <div class="detail-stats">
+        <div class="detail-stat"><div class="dl">Total</div><div class="dv" id="dm-total">0</div></div>
+        <div class="detail-stat"><div class="dl">Success</div><div class="dv" style="color:#3fb950" id="dm-success">0</div></div>
+        <div class="detail-stat"><div class="dl">Failed</div><div class="dv" style="color:#f85149" id="dm-failed">0</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn primary" id="dm-run-btn" onclick="dmRun()">Run</button>
+        <button class="btn danger" id="dm-stop-btn" onclick="dmStop()" style="display:none">Stop</button>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4 style="display:flex;align-items:center;justify-content:space-between">
+        History
+        <select id="dm-history-limit" onchange="openDetail(dmTaskName)" style="font-size:12px;padding:2px 6px">
+          <option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+        </select>
+      </h4>
+      <table><thead><tr><th>ID</th><th>Mode</th><th>Status</th><th>Inserted</th><th>Duration</th><th>Start</th><th>Error</th></tr></thead><tbody id="dm-history"></tbody></table>
+    </div>
+    <div class="modal-section" id="dm-fields-section">
+      <h4>Fields</h4>
+      <table class="field-table"><thead><tr><th>Field</th><th>Type</th><th>Description</th><th>PK</th></tr></thead><tbody id="dm-fields"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="log-modal" onclick="if(event.target===this)closeLogModal()">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h3 id="log-modal-title">Sync Log</h3>
+      <button class="modal-close" onclick="closeLogModal()">&times;</button>
+    </div>
+    <div class="log-controls">
+      <input id="log-modal-keyword" placeholder="Search keyword..." onkeydown="if(event.key==='Enter')loadLogModal()">
+      <select id="log-modal-lines" onchange="loadLogModal()"><option value="200">200 lines</option><option value="500">500 lines</option><option value="1000">1000 lines</option></select>
+      <button class="btn" onclick="loadLogModal()">Refresh</button>
+    </div>
+    <div class="log-box" id="log-modal-content" style="max-height:60vh">Loading...</div>
+  </div>
+</div>
+
+<script>
+const API = '/admin/api';
+let dashData = null;
+let dashCls = 'all';
+let dmTaskName = null;
+
+async function api(path) { const r = await fetch(API + path); return r.json(); }
+function badge(s) { const c = ['success','failed','running','queued'].includes(s)?s:'idle'; return `<span class="badge ${c}">${s}</span>`; }
+function fmtDur(s) { return s != null ? s.toFixed(1) + 's' : '-'; }
+function fmtTime(iso) { return iso ? new Date(iso).toLocaleString('zh-CN') : '-'; }
+function fmtRows(n) { return n != null ? n.toLocaleString() : '-'; }
+function fmtTimeShort(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+function fmtISO(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+async function loadDashboard() {
+  const s = await api('/stats');
+  document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card"><div class="label">Tasks</div><div class="value">${s.task_count}</div></div>
+    <div class="stat-card"><div class="label">Total Runs</div><div class="value">${s.total_runs}</div></div>
+    <div class="stat-card"><div class="label">Success</div><div class="value success">${s.success}</div></div>
+    <div class="stat-card"><div class="label">Failed</div><div class="value failed">${s.failed}</div></div>
+    <div class="stat-card"><div class="label">Running</div><div class="value running">${s.running}</div></div>`;
+  dashData = await api('/dashboard');
+  renderClsTabs();
+  renderTableGrid();
+}
+
+function renderClsTabs() {
+  if (!dashData) return;
+  const tabs = document.getElementById('cls-tabs');
+  const allCount = dashData.tables.length;
+  let html = `<div class="cls-tab ${dashCls==='all'?'active':''}" onclick="setDashCls('all')">All (${allCount})</div>`;
+  for (const cls of dashData.classifications) {
+    const count = dashData.tables.filter(t => t.classification === cls).length;
+    html += `<div class="cls-tab ${dashCls===cls?'active':''}" onclick="setDashCls('${cls}')">${cls} (${count})</div>`;
+  }
+  tabs.innerHTML = html;
+}
+
+function setDashCls(cls) { dashCls = cls; renderClsTabs(); renderTableGrid(); }
+function filterDashboard() { renderTableGrid(); }
+
+function renderTableGrid() {
+  if (!dashData) return;
+  const search = (document.getElementById('dash-search')?.value || '').toLowerCase();
+  let tables = dashData.tables;
+  if (dashCls !== 'all') tables = tables.filter(t => t.classification === dashCls);
+  if (search) tables = tables.filter(t => t.table_name.toLowerCase().includes(search) || t.name.toLowerCase().includes(search));
+  const grid = document.getElementById('table-grid');
+  if (!tables.length) { grid.innerHTML = '<div class="empty">No tables found</div>'; return; }
+  grid.innerHTML = tables.map(t => {
+    const cls = (t.status === 'failed' || (t.status && t.status.startsWith('error'))) ? 'table-card failed' : 'table-card';
+    return `<div class="${cls}" onclick="openDetail('${t.table_name}')">
+      <div class="tc-header"><span class="tc-name">${t.table_name}</span><span>${badge(t.status)}</span></div>
+      <div class="tc-header"><span style="font-size:12px;color:#8b949e">${t.name}</span><span class="tc-cls">${t.classification}</span></div>
+      <div class="tc-row"><span>Mode</span><span class="tc-val">${t.mode}</span></div>
+      <div class="tc-row"><span>Rows</span><span class="tc-val">${fmtRows(t.row_count)}</span></div>
+      <div class="tc-row"><span>Last Sync</span><span class="tc-val">${t.last_sync_time ? fmtTimeShort(t.last_sync_time) : '-'}</span></div>
+      <div class="tc-row"><span>Checkpoint</span><span class="tc-val">${t.checkpoint_date || '-'}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function openDetail(name) {
+  dmTaskName = name;
+  const limit = document.getElementById('dm-history-limit').value;
+  const d = await api(`/task/${name}?limit=${limit}`);
+  document.getElementById('dm-title').textContent = `${d.config.name} (${name})`;
+  document.getElementById('dm-api').textContent = d.config.api;
+  document.getElementById('dm-mode').textContent = d.config.mode;
+  document.getElementById('dm-schedule').textContent = d.config.schedule || '-';
+  document.getElementById('dm-cp').textContent = d.checkpoint ? d.checkpoint.last_sync_date : '-';
+  document.getElementById('dm-total').textContent = d.stats.total_runs;
+  document.getElementById('dm-success').textContent = d.stats.success;
+  document.getElementById('dm-failed').textContent = d.stats.failed;
+  document.getElementById('dm-run-btn').disabled = d.status === 'running';
+  document.getElementById('dm-stop-btn').style.display = d.status === 'running' ? 'inline-block' : 'none';
+
+  const hr = document.getElementById('dm-history');
+  hr.innerHTML = d.history.length ? d.history.map(r => {
+    return `<tr style="cursor:pointer" data-rid="${r.id}" data-st="${r.start_time||''}" data-et="${r.end_time||''}" data-status="${r.status}" onclick="showRunLogFromRow(this,'${name}')">
+    <td>${r.id}</td><td>${r.sync_mode}</td><td>${badge(r.status)}</td>
+    <td>${fmtRows(r.rows_inserted)}</td><td>${fmtDur(r.duration)}</td>
+    <td>${fmtTime(r.start_time)}</td>
+    <td style="color:#f85149;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.error_message||''}">${r.error_message || ''}</td>
+  </tr>`;
+  }).join('') : '<tr><td colspan="7" class="empty">No history</td></tr>';
+
+  const fh = document.getElementById('dm-fields');
+  if (d.config.fields) {
+    fh.innerHTML = Object.entries(d.config.fields).map(([k,v]) =>
+      `<tr><td><code>${k}</code></td><td>${v.type}</td><td>${v.desc}</td><td class="${v.pk?'pk':''}">${v.pk?'PK':''}</td></tr>`
+    ).join('');
+    document.getElementById('dm-fields-section').style.display = '';
+  } else {
+    document.getElementById('dm-fields-section').style.display = 'none';
+  }
+
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetailModal() { document.getElementById('detail-modal').classList.remove('show'); }
+
+async function dmRun() {
+  if (!dmTaskName) return;
+  const r = await fetch(`${API}/trigger/${dmTaskName}`, {method:'POST'});
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  openDetail(dmTaskName);
+}
+
+async function dmStop() {
+  if (!dmTaskName) return;
+  const r = await fetch(`${API}/stop/${dmTaskName}`, {method:'POST'});
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  document.getElementById('dm-run-btn').disabled = false;
+  document.getElementById('dm-stop-btn').style.display = 'none';
+  openDetail(dmTaskName);
+}
+
+let logTask = null, logStart = null, logEnd = null;
+
+function showRunLogFromRow(tr, tableName) {
+  const rid = tr.dataset.rid, st = tr.dataset.st, et = tr.dataset.et, status = tr.dataset.status;
+  logTask = tableName;
+  logStart = st || null;
+  if (status === 'running') {
+    logEnd = null;
+  } else if (et) {
+    const d = new Date(et); d.setSeconds(d.getSeconds() + 60); logEnd = fmtISO(d);
+  } else if (st) {
+    const d = new Date(st); d.setMinutes(d.getMinutes() + 5); logEnd = fmtISO(d);
+  } else {
+    logEnd = null;
+  }
+  document.getElementById('log-modal-title').textContent = `Sync Log - ${tableName} #${rid}`;
+  document.getElementById('log-modal-content').textContent = 'Loading...';
+  document.getElementById('log-modal-keyword').value = '';
+  document.getElementById('log-modal').classList.add('show');
+  loadLogModal();
+}
+
+async function loadLogModal() {
+  if (!logTask) return;
+  const lines = document.getElementById('log-modal-lines').value;
+  const kw = document.getElementById('log-modal-keyword').value;
+  let url = `/task/${logTask}/logs?lines=${lines}`;
+  if (logStart) url += '&start_time=' + encodeURIComponent(logStart);
+  if (logEnd) url += '&end_time=' + encodeURIComponent(logEnd);
+  if (kw) url += '&keyword=' + encodeURIComponent(kw);
+  const d = await api(url);
+  document.getElementById('log-modal-content').textContent = d.content || '(no log found)';
+}
+
+function closeLogModal() { document.getElementById('log-modal').classList.remove('show'); }
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDetailModal(); closeLogModal(); } });
+
+loadDashboard();
+setInterval(loadDashboard, 30000);
+</script>
+</body>
+</html>

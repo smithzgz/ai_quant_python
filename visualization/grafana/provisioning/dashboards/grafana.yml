@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: AI Quant Dashboards
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: D:\code\Python\ai_quant_python\visualization\grafana\dashboards
+      foldersFromFilesStructure: false
