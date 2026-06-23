@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math
 import random
 import json
 from datetime import datetime, date, timedelta
@@ -164,8 +165,8 @@ class SyncVerifier:
                     continue
                 api_val = api_row[col]
                 db_val = db_row[col]
-                api_is_none = api_val is None or (isinstance(api_val, float) and pd.isna(api_val))
-                db_is_none = db_val is None or (isinstance(db_val, float) and pd.isna(db_val))
+                api_is_none = api_val is None or (isinstance(api_val, float) and math.isnan(api_val))
+                db_is_none = db_val is None or (isinstance(db_val, float) and math.isnan(db_val))
                 if api_is_none and db_is_none:
                     continue
                 if api_is_none or db_is_none:

@@ -214,8 +214,8 @@ class SyncEngine:
                     data = _convert_dates(data, cfg)
                     self._write_df(table_name, data, cfg)
                     total_rows += len(data)
+                    self._update_checkpoint(table_name, td)
 
-                self._update_checkpoint(table_name, td)
                 logger.info(f"{table_name} {td_str} done ({total_rows} rows so far)")
 
             except Exception as e:
