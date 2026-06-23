@@ -113,6 +113,12 @@ class SyncEngine:
 
             if verify_ok:
                 logger.info(f"===== Sync completed: {table_name} ({total_rows} rows) =====")
+                if table_name in ("daily", "adj_factor") and total_rows > 0:
+                    try:
+                        from data.sync.adjusted_updater import update_adjusted_tables
+                        update_adjusted_tables(synced_start, synced_end)
+                    except Exception as ae:
+                        logger.error(f"Post-sync adjusted update failed: {ae}")
             else:
                 logger.error(f"===== Sync completed but VERIFY FAILED: {table_name} =====")
                 raise Exception(verify_msg)

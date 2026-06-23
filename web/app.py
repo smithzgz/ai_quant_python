@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -26,6 +27,15 @@ app.include_router(admin_router, prefix="/admin/api", tags=["管理后台"])
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.on_event("startup")
+def start_scheduler():
+    from data.sync.scheduler import create_scheduler
+    sched = create_scheduler()
+    t = threading.Thread(target=sched.start, daemon=True, name="scheduler")
+    t.start()
+    print("[Scheduler] Started in background thread")
 
 
 @app.get("/")
