@@ -12,7 +12,7 @@ router = APIRouter()
 
 TASK_STATUS = {}
 
-_running_syncs = {}
+from data.sync.engine import RUNNING_SYNCS as _running_syncs
 
 SERVER_START_TIME = datetime.now()
 
@@ -47,19 +47,16 @@ _init()
 
 def _run_sync_task(table_name):
     TASK_STATUS[table_name] = "running"
-    _running_syncs[table_name] = {"running": True, "cancel": False}
     try:
         from data.sync.engine import SyncEngine
         eng = SyncEngine()
-        eng.sync(table_name=table_name, cancel_check=lambda: _running_syncs.get(table_name, {}).get("cancel", False))
+        eng.sync(table_name=table_name)
         TASK_STATUS[table_name] = "success"
     except Exception as e:
         if "cancelled" in str(e).lower():
             TASK_STATUS[table_name] = "cancelled"
         else:
             TASK_STATUS[table_name] = f"error: {e}"
-    finally:
-        _running_syncs[table_name] = {"running": False, "cancel": False}
 
 
 def _read_log_file(filepath, lines=200, keyword=None):

@@ -10,6 +10,9 @@ from utils.logger import get_logger
 
 logger = get_logger("sync_engine")
 
+# Global registry: table_name -> {"running": bool, "cancel": bool}
+RUNNING_SYNCS = {}
+
 
 def _convert_dates(df, cfg):
     if df is None or df.empty:
@@ -36,7 +39,15 @@ class SyncEngine:
             if not cfg.get("enabled", True):
                 logger.info(f"Table {table_name} is disabled, skipping")
                 return
-            self._sync_table(table_name, cfg, mode, cancel_check)
+            def _cancel():
+                if cancel_check and cancel_check():
+                    return True
+                return RUNNING_SYNCS.get(table_name, {}).get("cancel", False)
+            RUNNING_SYNCS[table_name] = {"running": True, "cancel": False}
+            try:
+                self._sync_table(table_name, cfg, mode, _cancel)
+            finally:
+                RUNNING_SYNCS.pop(table_name, None)
         else:
             sorted_tasks = sorted(
                 DATA_SYNC_TASKS.items(),
@@ -45,13 +56,17 @@ class SyncEngine:
             for name, cfg in sorted_tasks:
                 if not cfg.get("enabled", True):
                     continue
-                if cancel_check and cancel_check():
-                    logger.info(f"Sync cancelled before {name}")
-                    break
+                RUNNING_SYNCS[name] = {"running": True, "cancel": False}
                 try:
-                    self._sync_table(name, cfg, mode, cancel_check)
+                    def _cancel(n=name):
+                        if cancel_check and cancel_check():
+                            return True
+                        return RUNNING_SYNCS.get(n, {}).get("cancel", False)
+                    self._sync_table(name, cfg, mode, _cancel)
                 except Exception as e:
                     logger.error(f"Sync failed for {name}: {e}")
+                finally:
+                    RUNNING_SYNCS.pop(name, None)
 
     def _sync_table(self, table_name: str, cfg: dict, mode_override: str = None, cancel_check=None):
         actual_mode = mode_override or cfg.get("mode", "once")
