@@ -14,8 +14,8 @@ def update_adjusted_tables(synced_start: date = None, synced_end: date = None):
         logger.warning("adjusted_updater: no date range, skipping")
         return
 
-    start_str = synced_start.strftime("%Y%m%d") if isinstance(synced_start, date) else str(synced_start)
-    end_str = synced_end.strftime("%Y%m%d") if isinstance(synced_end, date) else str(synced_end)
+    start_str = synced_start.strftime("%Y-%m-%d") if isinstance(synced_start, date) else str(synced_start)
+    end_str = synced_end.strftime("%Y-%m-%d") if isinstance(synced_end, date) else str(synced_end)
 
     logger.info(f"adjusted_updater: updating {start_str} ~ {end_str}")
 
@@ -25,20 +25,16 @@ def update_adjusted_tables(synced_start: date = None, synced_end: date = None):
             INSERT INTO daily_qfq (ts_code, trade_date, open, high, low, close, pre_close, change, pct_chg, vol, amount, adj_factor)
             SELECT
                 d.ts_code, d.trade_date,
-                ROUND((d.open * af.adj_factor / lf.adj_factor)::numeric, 4) AS open,
-                ROUND((d.high * af.adj_factor / lf.adj_factor)::numeric, 4) AS high,
-                ROUND((d.low * af.adj_factor / lf.adj_factor)::numeric, 4) AS low,
-                ROUND((d.close * af.adj_factor / lf.adj_factor)::numeric, 4) AS close,
-                ROUND((d.pre_close * af.adj_factor / lf.adj_factor)::numeric, 4) AS pre_close,
-                ROUND(((d.close - d.pre_close) * af.adj_factor / lf.adj_factor)::numeric, 4) AS change,
+                ROUND((d.open * af.adj_factor / lf.adj_factor)::numeric, 4),
+                ROUND((d.high * af.adj_factor / lf.adj_factor)::numeric, 4),
+                ROUND((d.low * af.adj_factor / lf.adj_factor)::numeric, 4),
+                ROUND((d.close * af.adj_factor / lf.adj_factor)::numeric, 4),
+                ROUND((d.pre_close * af.adj_factor / lf.adj_factor)::numeric, 4),
+                ROUND(((d.close - d.pre_close) * af.adj_factor / lf.adj_factor)::numeric, 4),
                 d.pct_chg, d.vol, d.amount, af.adj_factor
             FROM daily d
             JOIN adj_factor af ON d.ts_code = af.ts_code AND d.trade_date = af.trade_date
-            JOIN (
-                SELECT ts_code, adj_factor AS latest_adj
-                FROM adj_factor
-                WHERE trade_date = (SELECT MAX(trade_date) FROM adj_factor WHERE ts_code = adj_factor.ts_code)
-            ) lf ON d.ts_code = lf.ts_code
+            JOIN adj_factor lf ON d.ts_code = lf.ts_code AND lf.trade_date = (SELECT MAX(trade_date) FROM adj_factor)
             WHERE d.trade_date BETWEEN :s AND :e
             ON CONFLICT (ts_code, trade_date) DO UPDATE SET
                 open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low,

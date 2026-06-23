@@ -128,7 +128,7 @@ class SyncEngine:
 
             if verify_ok:
                 logger.info(f"===== Sync completed: {table_name} ({total_rows} rows) =====")
-                if table_name in ("daily", "adj_factor") and total_rows > 0:
+                if table_name in ("daily", "adj_factor"):
                     try:
                         from data.sync.adjusted_updater import update_adjusted_tables
                         update_adjusted_tables(synced_start, synced_end)
