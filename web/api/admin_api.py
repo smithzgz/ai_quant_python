@@ -120,19 +120,25 @@ CLASSIFICATION_MAP = {
     "trade_cal": "基础信息",
     "stock_basic": "基础信息",
     "fund_basic": "基础信息",
+    "index_basic": "基础信息",
     "daily": "行情数据",
     "daily_basic": "行情数据",
     "adj_factor": "行情数据",
     "fund_daily": "行情数据",
+    "index_daily": "行情数据",
+    "index_weekly": "行情数据",
+    "index_monthly": "行情数据",
+    "index_dailybasic": "行情数据",
     "moneyflow": "资金流向",
     "income": "财务报表",
     "balancesheet": "财务报表",
     "cashflow": "财务报表",
     "fina_indicator": "财务指标",
     "fina_audit": "财务指标",
+    "index_weight": "指数成分",
 }
 
-CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标"]
+CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分"]
 
 
 @router.get("/dashboard")

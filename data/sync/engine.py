@@ -245,10 +245,13 @@ class SyncEngine:
         return rows, start, end
 
     def _sync_by_code(self, table_name: str, cfg: dict, cancel_check=None):
+        code_source = cfg.get("code_source", "stock_basic")
+        code_field = cfg.get("code_field", "ts_code")
+        code_filter = cfg.get("code_filter", "list_status = 'L'")
         with engine.connect() as conn:
             from sqlalchemy import text
             result = conn.execute(text(
-                "SELECT ts_code FROM stock_basic WHERE list_status = 'L' ORDER BY ts_code"
+                f"SELECT ts_code FROM {code_source} WHERE {code_filter} ORDER BY ts_code"
             ))
             stocks = [row[0] for row in result.fetchall()]
 
@@ -265,20 +268,20 @@ class SyncEngine:
                 logger.info(f"{table_name}: sync cancelled at {ts_code}")
                 raise Exception(f"sync cancelled at {ts_code}")
             try:
-                data = self.client.call(api_name, ts_code=ts_code, fields=fields_str)
+                data = self.client.call(api_name, **{code_field: ts_code}, fields=fields_str)
                 if data is not None and not data.empty:
                     data = _convert_dates(data, cfg)
                     self._write_df(table_name, data, cfg)
                     total_rows += len(data)
 
                 if (i + 1) % 100 == 0:
-                    logger.info(f"{table_name}: {i+1}/{len(stocks)} stocks done ({total_rows} rows so far)")
+                    logger.info(f"{table_name}: {i+1}/{len(stocks)} done ({total_rows} rows so far)")
 
             except Exception as e:
                 logger.error(f"{table_name} {ts_code} failed: {e}")
 
         self._update_checkpoint(table_name, date.today())
-        logger.info(f"{table_name}: completed {len(stocks)} stocks, {total_rows} total rows")
+        logger.info(f"{table_name}: completed {len(stocks)} codes, {total_rows} total rows")
         return total_rows, date.today(), date.today()
 
     def _get_trade_dates(self, since: date) -> list:
