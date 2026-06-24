@@ -87,18 +87,23 @@ class SyncEngine:
         synced_end = None
 
         try:
-            api_date_type = cfg.get("api_date_type", "single")
-
-            if api_date_type == "code":
-                total_rows, synced_start, synced_end = self._sync_by_code(table_name, cfg, cancel_check)
-            elif actual_mode == "once":
-                total_rows, synced_start, synced_end = self._sync_once(table_name, cfg)
-            elif actual_mode == "incremental":
-                total_rows, synced_start, synced_end = self._sync_incremental(table_name, cfg, cancel_check)
-            elif actual_mode == "full":
-                total_rows, synced_start, synced_end = self._sync_full(table_name, cfg, cancel_check)
+            # Check for custom sync function
+            sync_func_path = cfg.get("sync_func")
+            if sync_func_path:
+                total_rows, synced_start, synced_end = self._sync_custom(table_name, cfg, sync_func_path, cancel_check)
             else:
-                raise ValueError(f"Unknown mode: {actual_mode}")
+                api_date_type = cfg.get("api_date_type", "single")
+
+                if api_date_type == "code":
+                    total_rows, synced_start, synced_end = self._sync_by_code(table_name, cfg, cancel_check)
+                elif actual_mode == "once":
+                    total_rows, synced_start, synced_end = self._sync_once(table_name, cfg)
+                elif actual_mode == "incremental":
+                    total_rows, synced_start, synced_end = self._sync_incremental(table_name, cfg, cancel_check)
+                elif actual_mode == "full":
+                    total_rows, synced_start, synced_end = self._sync_full(table_name, cfg, cancel_check)
+                else:
+                    raise ValueError(f"Unknown mode: {actual_mode}")
 
             verify_ok = True
             verify_msg = ""
@@ -368,6 +373,32 @@ class SyncEngine:
             return None
         finally:
             session.close()
+
+    def _sync_custom(self, table_name: str, cfg: dict, sync_func_path: str, cancel_check=None):
+        """Execute a custom sync function (non-tushare sources)."""
+        import importlib
+        module_path, func_name = sync_func_path.rsplit('.', 1)
+        module = importlib.import_module(module_path)
+        sync_func = getattr(module, func_name)
+
+        max_pages = cfg.get("max_pages", 0)
+        batch_size = cfg.get("batch_size", 50)
+
+        # Get raw psycopg2 connection from SQLAlchemy engine
+        raw_conn = engine.raw_connection()
+
+        try:
+            result = sync_func(
+                raw_conn,
+                mode=cfg.get("mode", "full"),
+                max_pages=max_pages,
+                batch_size=batch_size,
+            )
+        finally:
+            raw_conn.close()
+
+        total_rows = result.get("total_records", 0) if isinstance(result, dict) else 0
+        return total_rows, None, None
 
     def _update_checkpoint(self, table_name: str, sync_date: date):
         session = SessionLocal()
