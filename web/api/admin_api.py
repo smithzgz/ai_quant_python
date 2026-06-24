@@ -136,9 +136,10 @@ CLASSIFICATION_MAP = {
     "fina_indicator": "财务指标",
     "fina_audit": "财务指标",
     "index_weight": "指数成分",
+    "sohu_jlp": "研报推荐",
 }
 
-CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分"]
+CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "研报推荐"]
 
 
 @router.get("/dashboard")
