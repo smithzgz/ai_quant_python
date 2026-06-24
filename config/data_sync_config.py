@@ -707,7 +707,7 @@ DATA_SYNC_TASKS = {
     "sohu_jlp": {
         "name": "搜狐金罗盘(券商研报)",
         "api": "sohu_jlp",
-        "mode": "full",
+        "mode": "incremental",
         "schedule": "0 8 * * *",
         "priority": 20,
         "verify_sample_size": 0,

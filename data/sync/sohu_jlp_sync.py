@@ -219,6 +219,15 @@ def get_last_query(html: str) -> str:
     return ''
 
 
+def _check_record_exists(cursor, record: Dict) -> bool:
+    """Check if a record already exists in the database."""
+    cursor.execute(
+        "SELECT 1 FROM sohu_jlp WHERE ts_code=%s AND analyst=%s AND broker=%s AND comment_date=%s AND comment_price=%s",
+        (record['ts_code'], record['analyst'], record['broker'], record['comment_date'], record['comment_price'])
+    )
+    return cursor.fetchone() is not None
+
+
 def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
                    start_page: int = 1, batch_size: int = 50) -> dict:
     """
@@ -252,6 +261,7 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
 
     all_records = []
     cursor = db_conn.cursor()
+    stop_sync = False
 
     for page_num in range(start_page, total_pages + 1):
         page_html = fetch_page(page_num, session, last_query=last_query)
@@ -261,9 +271,20 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
             continue
 
         records = parse_page(page_html)
-        all_records.extend(records)
         stats['pages_synced'] += 1
         stats['total_records'] += len(records)
+
+        # Incremental mode: stop when we hit existing records
+        if mode == 'incremental' and records:
+            new_records = []
+            for rec in records:
+                if _check_record_exists(cursor, rec):
+                    stop_sync = True
+                    break
+                new_records.append(rec)
+            records = new_records
+
+        all_records.extend(records)
 
         # Batch insert
         if len(all_records) >= batch_size * 13:  # ~13 records per page
@@ -272,6 +293,10 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
             db_conn.commit()
             all_records = []
             logger.info(f'Page {page_num}/{total_pages}: synced {stats["total_records"]} records')
+
+        if stop_sync:
+            logger.info(f'Incremental sync: reached existing data at page {page_num}, stopping')
+            break
 
         # Rate limiting
         if page_num % 10 == 0:
