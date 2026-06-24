@@ -216,39 +216,20 @@
     },
     {
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
-            "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barMaxWidth": 0,
-            "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineInterpolation": "smooth", "lineWidth": 1, "pointSize": 5,
-            "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          },
-          "decimals": 4, "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "percentUnit"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 36 },
+"gridPos": { "h": 10, "w": 24, "x": 0, "y": 36 },
       "id": 6,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
-        "tooltip": { "mode": "single", "sort": "desc" }
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "weight" }]
       },
       "targets": [{
         "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
-        "format": "table", "group": [], "metricColumn": "ts_code", "rawQuery": true,
-        "rawSql": "SELECT\n  con_code AS ts_code,\n  weight / 100 AS weight_pct\nFROM index_weight\nWHERE index_code='${index_code}'\n  AND trade_date=(\n    SELECT MAX(trade_date)\n    FROM index_weight\n    WHERE index_code='${index_code}'\n  )\nORDER BY weight DESC\nLIMIT 30",
+        "format": "table", "group": [], "metricColumn": "none", "rawQuery": true,
+        "rawSql": "SELECT\n  con_code,\n  trade_date::date,\n  round(weight::numeric, 4) AS weight\nFROM index_weight\nWHERE index_code='${index_code}'\n  AND trade_date=(\n    SELECT MAX(trade_date) FROM index_weight WHERE index_code='${index_code}'\n  )\nORDER BY weight DESC\nLIMIT 30",
         "refId": "A", "select": [[{ "params": ["value"], "type": "column" }]], "timeColumn": "time", "where": []
       }],
-      "title": "Top 30 Holdings Weight",
-      "type": "timeseries"
+      "title": "Top 30 Holdings Weight (${index_code})",
+      "type": "table"
     },
     {
       "collapsed": false,
@@ -272,7 +253,7 @@
       "targets": [{
         "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
         "format": "table", "group": [], "metricColumn": "none", "rawQuery": true,
-        "rawSql": "SELECT\n  ts_code,\n  name,\n  industry,\n  market,\n  list_date,\n  list_status\nFROM index_basic\nWHERE name IS NOT NULL\nORDER BY ts_code\nLIMIT 500",
+        "rawSql": "SELECT\n  ts_code,\n  name,\n  category,\n  market,\n  publisher,\n  base_date,\n  base_point,\n  list_date\nFROM index_basic\nWHERE name IS NOT NULL\nORDER BY ts_code\nLIMIT 500",
         "refId": "A", "select": [[{ "params": ["value"], "type": "column" }]], "timeColumn": "time", "where": []
       }],
       "title": "Index List",
@@ -295,7 +276,7 @@
       }
     ]
   },
-  "time": { "from": "now-1y", "to": "now" },
+  "time": { "from": "now-30y", "to": "now" },
   "timepicker": {
     "time_options": ["7d", "30d", "90d", "6M", "1y", "3y", "5y", "10y"],
     "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"]

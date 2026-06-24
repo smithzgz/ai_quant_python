@@ -247,11 +247,12 @@ class SyncEngine:
     def _sync_by_code(self, table_name: str, cfg: dict, cancel_check=None):
         code_source = cfg.get("code_source", "stock_basic")
         code_field = cfg.get("code_field", "ts_code")
+        code_source_column = cfg.get("code_source_column", "ts_code")
         code_filter = cfg.get("code_filter", "list_status = 'L'")
         with engine.connect() as conn:
             from sqlalchemy import text
             result = conn.execute(text(
-                f"SELECT ts_code FROM {code_source} WHERE {code_filter} ORDER BY ts_code"
+                f"SELECT {code_source_column} FROM {code_source} WHERE {code_filter} ORDER BY {code_source_column}"
             ))
             stocks = [row[0] for row in result.fetchall()]
 
