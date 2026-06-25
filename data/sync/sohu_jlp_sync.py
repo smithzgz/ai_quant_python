@@ -219,6 +219,46 @@ def get_last_query(html: str) -> str:
     return ''
 
 
+def validate_coverage(cursor) -> dict:
+    """Validate JLP data coverage by year and month. Returns gap report."""
+    cursor.execute("""
+        SELECT EXTRACT(YEAR FROM comment_date)::int AS yr,
+               EXTRACT(MONTH FROM comment_date)::int AS mo,
+               COUNT(*) AS cnt,
+               MIN(comment_date) AS min_date,
+               MAX(comment_date) AS max_date
+        FROM sohu_jlp
+        GROUP BY yr, mo
+        ORDER BY yr, mo
+    """)
+    rows = cursor.fetchall()
+
+    yearly = {}
+    monthly = {}
+    for yr, mo, cnt, min_d, max_d in rows:
+        yearly.setdefault(yr, {'count': 0, 'months': set()})
+        yearly[yr]['count'] += cnt
+        yearly[yr]['months'].add(mo)
+        monthly[(yr, mo)] = {'count': cnt, 'min': min_d, 'max': max_d}
+
+    # Detect gaps: years with < 1000 records, or months with 0 records
+    gaps = []
+    for yr in sorted(yearly.keys()):
+        info = yearly[yr]
+        if info['count'] < 1000:
+            gaps.append(f"Year {yr}: only {info['count']} records")
+        missing_months = set(range(1, 13)) - info['months']
+        for mo in sorted(missing_months):
+            gaps.append(f"Year {yr} Month {mo}: no data")
+
+    return {
+        'yearly': {yr: info['count'] for yr, info in sorted(yearly.items())},
+        'total_dates': len(rows),
+        'gaps': gaps,
+        'total_records': sum(info['count'] for info in yearly.values()),
+    }
+
+
 def _check_record_exists(cursor, record: Dict) -> bool:
     """Check if a record already exists in the database."""
     cursor.execute(
@@ -246,7 +286,7 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
     session = requests.Session()
     stats = {'total_records': 0, 'pages_synced': 0, 'errors': 0, 'new': 0, 'updated': 0}
 
-    # Get total pages and lastQuery
+    # Get total pages and initial lastQuery
     html = fetch_page(1, session)
     if not html:
         logger.error('Failed to fetch page 1')
@@ -262,13 +302,21 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
     all_records = []
     cursor = db_conn.cursor()
     stop_sync = False
+    current_last_query = last_query
+
+    logger.info(f'Starting {mode} sync: total {total_pages} pages, batch_size={batch_size}')
 
     for page_num in range(start_page, total_pages + 1):
-        page_html = fetch_page(page_num, session, last_query=last_query)
+        page_html = fetch_page(page_num, session, last_query=current_last_query)
 
         if not page_html:
             stats['errors'] += 1
             continue
+
+        # Update lastQuery from each page response for proper pagination
+        new_lq = get_last_query(page_html)
+        if new_lq:
+            current_last_query = new_lq
 
         records = parse_page(page_html)
         stats['pages_synced'] += 1
@@ -292,7 +340,10 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
             stats['new'] += count
             db_conn.commit()
             all_records = []
-            logger.info(f'Page {page_num}/{total_pages}: synced {stats["total_records"]} records')
+
+        # Progress log every 50 pages
+        if page_num % 50 == 0:
+            logger.info(f'JLP progress: page {page_num}/{total_pages} ({page_num*100//total_pages}%), records={stats["total_records"]}, new={stats["new"]}, errors={stats["errors"]}')
 
         if stop_sync:
             logger.info(f'Incremental sync: reached existing data at page {page_num}, stopping')
@@ -307,6 +358,16 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
         count = _batch_upsert(cursor, all_records)
         stats['new'] += count
         db_conn.commit()
+
+    # Validate coverage
+    coverage = validate_coverage(cursor)
+    stats['coverage'] = coverage
+    if coverage['gaps']:
+        logger.warning(f'Data gaps detected: {len(coverage["gaps"])} issues')
+        for gap in coverage['gaps'][:20]:
+            logger.warning(f'  Gap: {gap}')
+        if len(coverage['gaps']) > 20:
+            logger.warning(f'  ... and {len(coverage["gaps"]) - 20} more gaps')
 
     cursor.close()
     session.close()

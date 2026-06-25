@@ -30,7 +30,7 @@ class SyncEngine:
         self.client = TushareClient()
         self.repo = BaseRepo(None)
 
-    def sync(self, table_name: str = None, mode: str = None, cancel_check=None):
+    def sync(self, table_name: str = None, mode: str = None, max_pages: int = None, cancel_check=None):
         if table_name:
             cfg = DATA_SYNC_TASKS.get(table_name)
             if not cfg:
@@ -45,7 +45,7 @@ class SyncEngine:
                 return RUNNING_SYNCS.get(table_name, {}).get("cancel", False)
             RUNNING_SYNCS[table_name] = {"running": True, "cancel": False}
             try:
-                self._sync_table(table_name, cfg, mode, _cancel)
+                self._sync_table(table_name, cfg, mode, max_pages, _cancel)
             finally:
                 RUNNING_SYNCS.pop(table_name, None)
         else:
@@ -62,13 +62,13 @@ class SyncEngine:
                         if cancel_check and cancel_check():
                             return True
                         return RUNNING_SYNCS.get(n, {}).get("cancel", False)
-                    self._sync_table(name, cfg, mode, _cancel)
+                    self._sync_table(name, cfg, mode, max_pages, _cancel)
                 except Exception as e:
                     logger.error(f"Sync failed for {name}: {e}")
                 finally:
                     RUNNING_SYNCS.pop(name, None)
 
-    def _sync_table(self, table_name: str, cfg: dict, mode_override: str = None, cancel_check=None):
+    def _sync_table(self, table_name: str, cfg: dict, mode_override: str = None, max_pages_override: int = None, cancel_check=None):
         actual_mode = mode_override or cfg.get("mode", "once")
         logger.info(f"===== Sync start: {table_name} (mode={actual_mode}) =====")
 
@@ -90,7 +90,7 @@ class SyncEngine:
             # Check for custom sync function
             sync_func_path = cfg.get("sync_func")
             if sync_func_path:
-                total_rows, synced_start, synced_end = self._sync_custom(table_name, cfg, sync_func_path, cancel_check)
+                total_rows, synced_start, synced_end = self._sync_custom(table_name, cfg, sync_func_path, cancel_check, max_pages_override, actual_mode)
             else:
                 api_date_type = cfg.get("api_date_type", "single")
 
@@ -374,15 +374,16 @@ class SyncEngine:
         finally:
             session.close()
 
-    def _sync_custom(self, table_name: str, cfg: dict, sync_func_path: str, cancel_check=None):
+    def _sync_custom(self, table_name: str, cfg: dict, sync_func_path: str, cancel_check=None, max_pages_override: int = None, mode_override: str = None):
         """Execute a custom sync function (non-tushare sources)."""
         import importlib
         module_path, func_name = sync_func_path.rsplit('.', 1)
         module = importlib.import_module(module_path)
         sync_func = getattr(module, func_name)
 
-        max_pages = cfg.get("max_pages", 0)
+        max_pages = max_pages_override if max_pages_override is not None else cfg.get("max_pages", 0)
         batch_size = cfg.get("batch_size", 50)
+        actual_mode = mode_override or cfg.get("mode", "full")
 
         # Get raw psycopg2 connection from SQLAlchemy engine
         raw_conn = engine.raw_connection()
@@ -390,7 +391,7 @@ class SyncEngine:
         try:
             result = sync_func(
                 raw_conn,
-                mode=cfg.get("mode", "full"),
+                mode=actual_mode,
                 max_pages=max_pages,
                 batch_size=batch_size,
             )

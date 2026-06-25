@@ -713,7 +713,7 @@ DATA_SYNC_TASKS = {
         "verify_sample_size": 0,
         "sync_func": "data.sync.sohu_jlp_sync.sync_sohu_jlp",
         "max_pages": 0,
-        "batch_size": 50,
+        "batch_size": 100,
         "fields": {
             "ts_code": ("str", "股票代码", True),
             "stock_name": ("str", "股票名称", False),

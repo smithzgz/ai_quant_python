@@ -45,12 +45,12 @@ def _init():
 _init()
 
 
-def _run_sync_task(table_name):
+def _run_sync_task(table_name, mode=None, max_pages=None):
     TASK_STATUS[table_name] = "running"
     try:
         from data.sync.engine import SyncEngine
         eng = SyncEngine()
-        eng.sync(table_name=table_name)
+        eng.sync(table_name=table_name, mode=mode, max_pages=max_pages)
         TASK_STATUS[table_name] = "success"
     except Exception as e:
         if "cancelled" in str(e).lower():
@@ -452,15 +452,16 @@ def sync_stats():
 
 
 @router.post("/trigger/{table_name}")
-def trigger_sync(table_name: str, background_tasks: BackgroundTasks):
+def trigger_sync(table_name: str, background_tasks: BackgroundTasks,
+                 mode: str = Query(default=''), max_pages: int = Query(default=0)):
     if table_name not in DATA_SYNC_TASKS:
         return {"error": f"Unknown table: {table_name}"}
     current = TASK_STATUS.get(table_name)
     if current == "running":
         return {"error": f"Task {table_name} is already running"}
     TASK_STATUS[table_name] = "queued"
-    background_tasks.add_task(_run_sync_task, table_name)
-    return {"status": "queued", "table_name": table_name}
+    background_tasks.add_task(_run_sync_task, table_name, mode=mode or None, max_pages=max_pages or None)
+    return {"status": "queued", "table_name": table_name, "mode": mode or "default"}
 
 
 @router.post("/stop/{table_name}")
@@ -493,3 +494,24 @@ def stop_all_sync():
             state["cancel"] = True
             stopped.append(tbl)
     return {"status": "stopping", "tables": stopped} if stopped else {"error": "No running syncs"}
+
+
+@router.get("/validate/{table_name}")
+def validate_table(table_name: str):
+    """Validate data coverage for a table."""
+    if table_name == "sohu_jlp":
+        from data.sync.sohu_jlp_sync import validate_coverage
+        import psycopg2
+        conn = psycopg2.connect(
+            host=settings.DB_HOST, port=settings.DB_PORT,
+            user=settings.DB_USER, password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
+        )
+        try:
+            cur = conn.cursor()
+            result = validate_coverage(cur)
+            cur.close()
+            return result
+        finally:
+            conn.close()
+    return {"error": f"Validation not supported for {table_name}"}

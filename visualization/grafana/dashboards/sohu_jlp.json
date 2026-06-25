@@ -22,7 +22,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "id": 1,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT ts_code) AS \"Unique Stocks\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT ts_code) AS \"Unique Stocks\" FROM sohu_jlp", "refId": "A" }],
       "title": "Unique Stocks",
       "type": "stat"
     },
@@ -35,7 +35,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "id": 2,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(*) AS \"Total Records\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(*) AS \"Total Records\" FROM sohu_jlp", "refId": "A" }],
       "title": "Total Records",
       "type": "stat"
     },
@@ -48,7 +48,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "id": 3,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT MAX(comment_date) AS \"Latest Date\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT MAX(comment_date) AS \"Latest Date\" FROM sohu_jlp", "refId": "A" }],
       "title": "Latest Date",
       "type": "stat"
     },
@@ -61,7 +61,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "id": 4,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT broker) AS \"Unique Brokers\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT broker) AS \"Unique Brokers\" FROM sohu_jlp", "refId": "A" }],
       "title": "Unique Brokers",
       "type": "stat"
     },
@@ -74,7 +74,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "id": 5,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT analyst) AS \"Unique Analysts\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT analyst) AS \"Unique Analysts\" FROM sohu_jlp", "refId": "A" }],
       "title": "Unique Analysts",
       "type": "stat"
     },
@@ -87,7 +87,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "id": 6,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT industry) AS \"Unique Industries\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT industry) AS \"Unique Industries\" FROM sohu_jlp", "refId": "A" }],
       "title": "Unique Industries",
       "type": "stat"
     },
@@ -139,7 +139,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
       "id": 10,
       "options": { "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "time_series", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT comment_date::date AS time, AVG(CAST(REPLACE(target_space, '%', '') AS NUMERIC) / 100) AS \"Avg Target Upside\" FROM sohu_jlp WHERE target_space IS NOT NULL AND target_space != '--' AND target_space != '' GROUP BY comment_date ORDER BY comment_date", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "time_series", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT comment_date::date AS time, AVG(CASE WHEN target_space IS NOT NULL AND target_space != '--' AND target_space != '' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END) AS \"Avg Target Upside\" FROM sohu_jlp GROUP BY comment_date ORDER BY comment_date", "refId": "A" }],
       "title": "Average Target Upside by Date",
       "type": "timeseries"
     },
@@ -156,7 +156,7 @@
       "gridPos": { "h": 16, "w": 24, "x": 0, "y": 22 },
       "id": 11,
       "options": { "cellHeight": "sm", "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "comment_date" }] },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT ts_code, stock_name, industry, analyst, broker, comment_date, comment_price, target_price, target_space, price_20d, change_20d, price_60d, change_60d, LEFT(recommend_reason, 200) AS reason_preview FROM sohu_jlp ORDER BY comment_date DESC LIMIT 500", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT ts_code, stock_name, industry, analyst, broker, comment_date, comment_price, target_price, CASE WHEN target_space IS NOT NULL AND target_space != '--' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS target_space, price_20d, CASE WHEN change_20d IS NOT NULL AND change_20d != '--' THEN CAST(REPLACE(REPLACE(change_20d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_20d, price_60d, CASE WHEN change_60d IS NOT NULL AND change_60d != '--' THEN CAST(REPLACE(REPLACE(change_60d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_60d, LEFT(recommend_reason, 200) AS reason_preview FROM sohu_jlp ORDER BY comment_date DESC LIMIT 500", "refId": "A" }],
       "title": "All Recommendations",
       "type": "table"
     }
