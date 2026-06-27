@@ -146,7 +146,7 @@ def _batch_upsert(cursor, records: List[Dict]) -> int:
             cursor.execute(sql, rec)
             count += 1
         except Exception as e:
-            logger.debug(f'Eastmoney upsert error for {rec.get("ts_code","?")}: {e}')
+            logger.warning(f'Eastmoney upsert error for {rec.get("ts_code","?")}: {e}')
             cursor.connection.rollback()
     return count
 

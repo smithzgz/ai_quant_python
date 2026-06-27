@@ -72,7 +72,7 @@ def parse_page(html: str) -> List[Dict]:
             if record and record.get('ts_code'):
                 records.append(record)
         except Exception as e:
-            logger.debug(f'Row parse error: {e}')
+            logger.warning(f'Row parse error: {e}')
     return records
 
 
@@ -427,7 +427,7 @@ def _batch_upsert(cursor, records: List[Dict]) -> int:
             cursor.execute(sql, rec)
             count += 1
         except Exception as e:
-            logger.debug(f'Upsert error: {e}')
+            logger.warning(f'Upsert error: {e}')
 
     return count
 
