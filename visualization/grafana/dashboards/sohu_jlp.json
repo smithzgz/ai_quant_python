@@ -17,7 +17,7 @@
         "y": 0
       },
       "id": 100,
-      "title": "Sohu JLP - Analyst Recommendations",
+"title": "Analyst Recommendations",
       "type": "row"
     },
     {
@@ -834,15 +834,319 @@
       ],
       "title": "All Recommendations",
       "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 200
+      },
+      "id": 200,
+      "title": "Eastmoney Research Reports",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 201 },
+      "id": 201,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Total Reports",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*)::int FROM eastmoney_report",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 201 },
+      "id": 202,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Stocks Covered",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT ts_code)::int FROM eastmoney_report",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 201 },
+      "id": 203,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Brokers",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT broker)::int FROM eastmoney_report",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 201 },
+      "id": 204,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Date Range",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT MIN(publish_date)::text || ' ~ ' || MAX(publish_date)::text FROM eastmoney_report",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 201 },
+      "id": 205,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "multi" } },
+      "title": "Reports by Year",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT EXTRACT(YEAR FROM publish_date)::int AS time, COUNT(*) AS \"Reports\" FROM eastmoney_report GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "timeColumn": "time"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 209 },
+      "id": 206,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "multi" } },
+      "title": "Rating Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT EXTRACT(YEAR FROM publish_date)::int AS time, em_rating, COUNT(*) AS cnt FROM eastmoney_report WHERE em_rating IS NOT NULL AND em_rating != '' GROUP BY 1, 2 ORDER BY 1",
+          "refId": "A",
+          "timeColumn": "time"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisCenteredZero": false,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "normal" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 209 },
+      "id": 207,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "multi" } },
+      "title": "Top 10 Brokers",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT EXTRACT(YEAR FROM publish_date)::int AS time, broker, COUNT(*) AS cnt FROM eastmoney_report GROUP BY 1, 2 HAVING COUNT(*) > 100 ORDER BY 1, 3 DESC",
+          "refId": "A",
+          "timeColumn": "time"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 16, "x": 16, "y": 209 },
+      "id": 208,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "publish_date", "desc": true }]
+      },
+      "title": "Recent Reports",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT ts_code, stock_name, analyst, broker, publish_date, title, em_rating, target_pricehigh, target_pricelow, predict_this_year_eps FROM eastmoney_report WHERE ts_code IN (${em_ts_code}) ORDER BY publish_date DESC LIMIT 500",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 217 },
+      "id": 209,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "publish_date", "desc": true }]
+      },
+      "title": "Target Price Range",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "rawQuery": true,
+          "rawSql": "SELECT ts_code, stock_name, broker, publish_date, target_pricelow, target_pricehigh, CASE WHEN target_pricehigh > 0 AND target_pricelow > 0 THEN ROUND((target_pricehigh - target_pricelow)::numeric / target_pricelow * 100, 1) || '%' ELSE NULL END AS price_range_pct, em_rating FROM eastmoney_report WHERE target_pricehigh IS NOT NULL AND target_pricelow IS NOT NULL AND target_pricehigh > 0 AND target_pricelow > 0 ORDER BY publish_date DESC LIMIT 300",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1h",
   "schemaVersion": 39,
   "tags": [
     "ai_quant",
-    "sohu",
-    "jlp",
-    "analyst"
+    "analyst",
+    "eastmoney"
   ],
   "templating": {
     "list": [
@@ -857,9 +1161,28 @@
         "includeAll": true,
         "multi": true,
         "name": "ts_code",
-        "label": "Stock",
+        "label": "Stock (JLP)",
         "options": [],
         "query": "SELECT ts_code || ' - ' || stock_name AS __text, ts_code AS __value FROM sohu_jlp GROUP BY ts_code, stock_name ORDER BY ts_code",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "",
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "bfpbii1tm9ou8c"
+        },
+        "definition": "SELECT ts_code || ' - ' || stock_name AS __text, ts_code AS __value FROM eastmoney_report GROUP BY ts_code, stock_name ORDER BY ts_code",
+        "includeAll": true,
+        "multi": true,
+        "name": "em_ts_code",
+        "label": "Stock (Eastmoney)",
+        "options": [],
+        "query": "SELECT ts_code || ' - ' || stock_name AS __text, ts_code AS __value FROM eastmoney_report GROUP BY ts_code, stock_name ORDER BY ts_code",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -890,7 +1213,7 @@
     ]
   },
   "timezone": "Asia/Shanghai",
-  "title": "Sohu JLP - Analyst Recommendations",
+  "title": "Analyst Recommendations",
   "uid": "sohu-jlp",
   "version": 1
 }

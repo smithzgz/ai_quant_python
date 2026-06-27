@@ -136,10 +136,11 @@ CLASSIFICATION_MAP = {
     "fina_indicator": "财务指标",
     "fina_audit": "财务指标",
     "index_weight": "指数成分",
-    "sohu_jlp": "研报推荐",
+    "sohu_jlp": "Analyst Recommendations",
+    "eastmoney_report": "Analyst Recommendations",
 }
 
-CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "研报推荐"]
+CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "Analyst Recommendations"]
 
 
 @router.get("/dashboard")
@@ -512,6 +513,27 @@ def validate_table(table_name: str):
             result = validate_coverage(cur)
             cur.close()
             return result
+        finally:
+            conn.close()
+    elif table_name == "eastmoney_report":
+        import psycopg2
+        from config.settings import settings
+        conn = psycopg2.connect(
+            host=settings.DB_HOST, port=settings.DB_PORT,
+            user=settings.DB_USER, password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
+        )
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT MIN(publish_date), MAX(publish_date), COUNT(*), COUNT(DISTINCT ts_code) FROM eastmoney_report")
+            row = cur.fetchone()
+            cur.close()
+            return {
+                "min_date": row[0].isoformat() if row[0] else None,
+                "max_date": row[1].isoformat() if row[1] else None,
+                "total_records": row[2],
+                "total_stocks": row[3],
+            }
         finally:
             conn.close()
     return {"error": f"Validation not supported for {table_name}"}
