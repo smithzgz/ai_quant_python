@@ -39,7 +39,7 @@ class BaseRepo:
                 pass
 
         inserted = rows_after - rows_before
-        logger.debug(f"bulk_upsert_df {table_name}: {len(df)} rows written, {inserted} new")
+        logger.info(f"bulk_upsert_df {table_name}: {len(df)} rows written, {inserted} new")
         return len(df)
 
     def get_latest_date(self, table_name: str, date_col: str = "trade_date"):
