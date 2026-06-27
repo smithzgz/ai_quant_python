@@ -190,7 +190,8 @@ def validate_coverage(cursor) -> dict:
     }
 
 
-def sync_eastmoney_reports(db_conn, start_year: int = 2017, end_year: int = 2026,
+def sync_eastmoney_reports(db_conn, mode: str = 'full', max_pages: int = 0,
+                           start_year: int = 2017, end_year: int = 2026,
                            batch_size: int = 500,
                            mode_override: str = None, max_pages_override: int = None) -> dict:
     """
