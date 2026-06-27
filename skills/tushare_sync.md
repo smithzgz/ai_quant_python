@@ -236,7 +236,53 @@ cur = conn.cursor()
 print(validate_coverage(cur))
 ```
 
-## 8. File Checklist
+## 8. Logging Requirements
+
+### Progress Logging
+```python
+# 每 N 条记录打印一次进度
+if record_count % 1000 == 0:
+    logger.info(f'Sync progress: {record_count} records, new={new_count}, errors={error_count}')
+
+# 每 N 页打印一次进度
+if page_num % 100 == 0:
+    logger.info(f'Page {page_num}/{total_pages} ({page_num*100//total_pages}%), records={total_records}')
+```
+
+### Error Logging
+```python
+# 所有异常必须记录
+try:
+    process_record(rec)
+except Exception as e:
+    logger.error(f'Failed to process {rec["id"]}: {e}')
+    # 不要吞掉异常，继续处理下一条
+
+# 网络错误用 warning（可重试）
+logger.warning(f'API timeout page {page_no} (attempt {attempt+1}): {e}')
+
+# 数据问题用 warning
+logger.warning(f'Invalid rating: {rec.get("rating")} for {ts_code}')
+
+# 严重错误用 error
+logger.error(f'Database connection failed: {e}')
+```
+
+### 日志级别规范
+| 级别 | 场景 | 示例 |
+|------|------|------|
+| `DEBUG` | 详细调试信息 | 单条记录解析失败 |
+| `INFO` | 正常进度 | 同步开始/完成、进度报告 |
+| `WARNING` | 可恢复问题 | API 超时、数据格式异常 |
+| `ERROR` | 严重错误 | 数据库连接失败、核心功能异常 |
+
+### 同步完成日志
+```python
+logger.info(f'Sync complete: {stats}')
+# 输出: Sync complete: {total_records: 12345, new: 10000, errors: 5, years: {2020: 5000, 2021: 5345}}
+```
+
+## 9. File Checklist
 
 When adding a new sync source:
 - [ ] `config/data_sync_config.py` - Add task config
