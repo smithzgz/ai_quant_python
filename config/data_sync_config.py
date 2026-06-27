@@ -740,10 +740,14 @@ DATA_SYNC_TASKS = {
         "mode": "full",
         "schedule": "0 9 * * 1",
         "priority": 20,
-        "verify_sample_size": 0,
+        "verify_sample_size": 5,
         "sync_func": "data.sync.eastmoney_report_sync.sync_eastmoney_reports",
         "max_pages": 0,
         "batch_size": 500,
+        "quality_rules": [
+            "no_null_price",
+            "valid_rating",
+        ],
         "fields": {
             "ts_code": ("str", "股票代码", True),
             "stock_name": ("str", "股票名称", False),

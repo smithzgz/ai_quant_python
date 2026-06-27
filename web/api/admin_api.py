@@ -516,8 +516,8 @@ def validate_table(table_name: str):
         finally:
             conn.close()
     elif table_name == "eastmoney_report":
+        from data.sync.eastmoney_report_sync import validate_coverage
         import psycopg2
-        from config.settings import settings
         conn = psycopg2.connect(
             host=settings.DB_HOST, port=settings.DB_PORT,
             user=settings.DB_USER, password=settings.DB_PASSWORD,
@@ -525,15 +525,9 @@ def validate_table(table_name: str):
         )
         try:
             cur = conn.cursor()
-            cur.execute("SELECT MIN(publish_date), MAX(publish_date), COUNT(*), COUNT(DISTINCT ts_code) FROM eastmoney_report")
-            row = cur.fetchone()
+            result = validate_coverage(cur)
             cur.close()
-            return {
-                "min_date": row[0].isoformat() if row[0] else None,
-                "max_date": row[1].isoformat() if row[1] else None,
-                "total_records": row[2],
-                "total_stocks": row[3],
-            }
+            return result
         finally:
             conn.close()
     return {"error": f"Validation not supported for {table_name}"}

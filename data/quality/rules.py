@@ -48,6 +48,18 @@ QUALITY_RULES = {
         "threshold": 10000,
         "level": "warn",
     },
+    "valid_rating": {
+        "name": "评级有效性",
+        "check_cols": ["em_rating"],
+        "valid_values": ["买入", "增持", "推荐", "强烈推荐", "优于大市", "跑赢行业", "审慎增持", "中性", "持有", "同步大市", "回避", "减持"],
+        "level": "warn",
+    },
+    "target_price合理性": {
+        "name": "目标价合理性",
+        "check_cols": ["target_pricehigh", "target_pricelow"],
+        "condition": "target_pricehigh >= target_pricelow",
+        "level": "warn",
+    },
 }
 
 
@@ -136,6 +148,27 @@ def check_reasonable_pe(df, rule_cfg):
     return issues
 
 
+def check_valid_rating(df, rule_cfg):
+    issues = []
+    for col in rule_cfg["check_cols"]:
+        if col in df.columns:
+            valid = rule_cfg.get("valid_values", [])
+            invalid = (~df[col].isin(valid) & df[col].notna() & (df[col] != '')).sum()
+            if invalid > 0:
+                issues.append(f"column '{col}' has {invalid} invalid rating values")
+    return issues
+
+
+def check_target_price合理性(df, rule_cfg):
+    issues = []
+    if "target_pricehigh" in df.columns and "target_pricelow" in df.columns:
+        valid = df[(df["target_pricehigh"].notna()) & (df["target_pricelow"].notna())]
+        bad = (valid["target_pricehigh"] < valid["target_pricelow"]).sum()
+        if bad > 0:
+            issues.append(f"{bad} rows where target_pricehigh < target_pricelow")
+    return issues
+
+
 RULE_CHECKERS = {
     "no_null_price": check_no_null_price,
     "positive_volume": check_positive_volume,
@@ -144,4 +177,6 @@ RULE_CHECKERS = {
     "no_missing_dates": check_no_missing_dates,
     "adj_factor_positive": check_adj_factor_positive,
     "reasonable_pe": check_reasonable_pe,
+    "valid_rating": check_valid_rating,
+    "target_price合理性": check_target_price合理性,
 }

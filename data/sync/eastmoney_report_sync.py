@@ -151,6 +151,45 @@ def _batch_upsert(cursor, records: List[Dict]) -> int:
     return count
 
 
+def validate_coverage(cursor) -> dict:
+    """Validate eastmoney_report data coverage by year and month. Returns gap report."""
+    cursor.execute("""
+        SELECT EXTRACT(YEAR FROM publish_date)::int AS yr,
+               EXTRACT(MONTH FROM publish_date)::int AS mo,
+               COUNT(*) AS cnt,
+               MIN(publish_date) AS min_date,
+               MAX(publish_date) AS max_date
+        FROM eastmoney_report
+        GROUP BY yr, mo
+        ORDER BY yr, mo
+    """)
+    rows = cursor.fetchall()
+
+    yearly = {}
+    monthly = {}
+    for yr, mo, cnt, min_d, max_d in rows:
+        yearly.setdefault(yr, {'count': 0, 'months': set()})
+        yearly[yr]['count'] += cnt
+        yearly[yr]['months'].add(mo)
+        monthly[(yr, mo)] = {'count': cnt, 'min': min_d, 'max': max_d}
+
+    gaps = []
+    for yr in sorted(yearly.keys()):
+        info = yearly[yr]
+        if info['count'] < 500:
+            gaps.append(f"Year {yr}: only {info['count']} records")
+        missing_months = set(range(1, 13)) - info['months']
+        for mo in sorted(missing_months):
+            gaps.append(f"Year {yr} Month {mo}: no data")
+
+    return {
+        'yearly': {yr: info['count'] for yr, info in sorted(yearly.items())},
+        'total_dates': len(rows),
+        'gaps': gaps,
+        'total_records': sum(info['count'] for info in yearly.values()),
+    }
+
+
 def sync_eastmoney_reports(db_conn, start_year: int = 2017, end_year: int = 2026,
                            batch_size: int = 500,
                            mode_override: str = None, max_pages_override: int = None) -> dict:
