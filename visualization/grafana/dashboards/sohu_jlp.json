@@ -1,5 +1,7 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -8,165 +10,885 @@
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 100,
       "title": "Sohu JLP - Analyst Recommendations",
       "type": "row"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
       "id": 1,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT ts_code) AS \"Unique Stocks\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT ts_code) AS \"Unique Stocks\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Unique Stocks",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
       "id": 2,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(*) AS \"Total Records\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Total Records\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Total Records",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "dateTimeAsIso" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dateTimeAsIso"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
       "id": 3,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT MAX(comment_date) AS \"Latest Date\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT MAX(comment_date) AS \"Latest Date\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Latest Date",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
       "id": 4,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT broker) AS \"Unique Brokers\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT broker) AS \"Unique Brokers\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Unique Brokers",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
       "id": 5,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT analyst) AS \"Unique Analysts\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT analyst) AS \"Unique Analysts\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Unique Analysts",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
       "id": 6,
-      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT industry) AS \"Unique Industries\" FROM sohu_jlp", "refId": "A" }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT industry) AS \"Unique Industries\" FROM sohu_jlp WHERE ts_code IN (${ts_code})",
+          "refId": "A"
+        }
+      ],
       "title": "Unique Industries",
       "type": "stat"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barMaxWidth": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" },
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barMaxWidth": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
       "id": 7,
-      "options": { "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "time_series", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT comment_date::date AS time, COUNT(*) AS \"Recommendations\" FROM sohu_jlp GROUP BY comment_date ORDER BY comment_date", "refId": "A" }],
+      "options": {
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT comment_date::date AS time, COUNT(*) AS \"Recommendations\" FROM sohu_jlp WHERE ts_code IN (${ts_code}) GROUP BY comment_date ORDER BY comment_date",
+          "refId": "A"
+        }
+      ],
       "title": "Recommendations by Date",
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
       "id": 8,
-      "options": { "displayMode": "gradient", "minVizHeight": 10, "minVizWidth": 0, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true, "valueMode": "text" },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT broker, COUNT(*) AS count FROM sohu_jlp WHERE comment_date >= (SELECT MAX(comment_date) - INTERVAL '30 days' FROM sohu_jlp) GROUP BY broker ORDER BY count DESC LIMIT 15", "refId": "A" }],
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "text"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT broker, COUNT(*) AS count FROM sohu_jlp WHERE ts_code IN (${ts_code}) AND comment_date >= (SELECT MAX(comment_date) - INTERVAL '30 days' FROM sohu_jlp) GROUP BY broker ORDER BY count DESC LIMIT 15",
+          "refId": "A"
+        }
+      ],
       "title": "Top Brokers (30d)",
       "type": "bargauge"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
       "id": 9,
-      "options": { "displayMode": "gradient", "minVizHeight": 10, "minVizWidth": 0, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showUnfilled": true, "valueMode": "text" },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT industry, COUNT(*) AS count FROM sohu_jlp WHERE comment_date >= (SELECT MAX(comment_date) - INTERVAL '30 days' FROM sohu_jlp) GROUP BY industry ORDER BY count DESC LIMIT 15", "refId": "A" }],
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "text"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT industry, COUNT(*) AS count FROM sohu_jlp WHERE ts_code IN (${ts_code}) AND comment_date >= (SELECT MAX(comment_date) - INTERVAL '30 days' FROM sohu_jlp) GROUP BY industry ORDER BY count DESC LIMIT 15",
+          "refId": "A"
+        }
+      ],
       "title": "Top Industries (30d)",
       "type": "bargauge"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "barMaxWidth": 0, "drawStyle": "line", "fillOpacity": 0, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "decimals": 2, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "percentunit" },
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barMaxWidth": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
       "id": 10,
-      "options": { "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "time_series", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT comment_date::date AS time, AVG(CASE WHEN target_space IS NOT NULL AND target_space != '--' AND target_space != '' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END) AS \"Avg Target Upside\" FROM sohu_jlp GROUP BY comment_date ORDER BY comment_date", "refId": "A" }],
+      "options": {
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT comment_date::date AS time, AVG(CASE WHEN target_space IS NOT NULL AND target_space != '--' AND target_space != '' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END) AS \"Avg Target Upside\" FROM sohu_jlp WHERE ts_code IN (${ts_code}) GROUP BY comment_date ORDER BY comment_date",
+          "refId": "A"
+        }
+      ],
       "title": "Average Target Upside by Date",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
       "id": 200,
       "title": "Recommendation Details",
       "type": "row"
     },
     {
-      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
-      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": true, "inspect": false }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [{ "matcher": { "id": "byName", "options": "target_space" }, "properties": [{ "id": "unit", "value": "percentunit" }] }, { "matcher": { "id": "byName", "options": "change_20d" }, "properties": [{ "id": "unit", "value": "percentunit" }] }, { "matcher": { "id": "byName", "options": "change_60d" }, "properties": [{ "id": "unit", "value": "percentunit" }] }] },
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 22 },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "bfpbii1tm9ou8c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "target_space"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "change_20d"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "change_60d"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
       "id": 11,
-      "options": { "cellHeight": "sm", "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "comment_date" }] },
-      "targets": [{ "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" }, "format": "table", "group": [], "metricColumn": "none", "rawQuery": true, "rawSql": "SELECT ts_code, stock_name, industry, analyst, broker, comment_date, comment_price, target_price, CASE WHEN target_space IS NOT NULL AND target_space != '--' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS target_space, price_20d, CASE WHEN change_20d IS NOT NULL AND change_20d != '--' THEN CAST(REPLACE(REPLACE(change_20d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_20d, price_60d, CASE WHEN change_60d IS NOT NULL AND change_60d != '--' THEN CAST(REPLACE(REPLACE(change_60d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_60d, LEFT(recommend_reason, 200) AS reason_preview FROM sohu_jlp ORDER BY comment_date DESC LIMIT 500", "refId": "A" }],
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "comment_date"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "bfpbii1tm9ou8c"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT ts_code, stock_name, industry, analyst, broker, comment_date, comment_price, target_price, CASE WHEN target_space IS NOT NULL AND target_space != '--' THEN CAST(REPLACE(REPLACE(target_space, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS target_space, price_20d, CASE WHEN change_20d IS NOT NULL AND change_20d != '--' THEN CAST(REPLACE(REPLACE(change_20d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_20d, price_60d, CASE WHEN change_60d IS NOT NULL AND change_60d != '--' THEN CAST(REPLACE(REPLACE(change_60d, '%', ''), ',', '') AS NUMERIC) / 100.0 ELSE NULL END AS change_60d, LEFT(recommend_reason, 200) AS reason_preview FROM sohu_jlp WHERE ts_code IN (${ts_code}) ORDER BY comment_date DESC LIMIT 500",
+          "refId": "A"
+        }
+      ],
       "title": "All Recommendations",
       "type": "table"
     }
   ],
   "refresh": "1h",
   "schemaVersion": 39,
-  "tags": ["ai_quant", "sohu", "jlp", "analyst"],
-  "templating": { "list": [] },
-  "time": { "from": "now-90d", "to": "now" },
-  "timepicker": { "time_options": ["7d", "30d", "90d", "6M", "1y", "3y", "5y"], "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+  "tags": [
+    "ai_quant",
+    "sohu",
+    "jlp",
+    "analyst"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": "",
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "bfpbii1tm9ou8c"
+        },
+        "definition": "SELECT ts_code || ' - ' || stock_name AS __text, ts_code AS __value FROM sohu_jlp GROUP BY ts_code, stock_name ORDER BY ts_code",
+        "includeAll": true,
+        "multi": true,
+        "name": "ts_code",
+        "label": "Stock",
+        "options": [],
+        "query": "SELECT ts_code || ' - ' || stock_name AS __text, ts_code AS __value FROM sohu_jlp GROUP BY ts_code, stock_name ORDER BY ts_code",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {
+    "time_options": [
+      "7d",
+      "30d",
+      "90d",
+      "6M",
+      "1y",
+      "3y",
+      "5y"
+    ],
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
   "timezone": "Asia/Shanghai",
   "title": "Sohu JLP - Analyst Recommendations",
   "uid": "sohu-jlp",

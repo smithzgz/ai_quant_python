@@ -22,18 +22,26 @@ HEADERS = {
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
 }
 
+# Form 1 base fields (all 11 hidden fields required for pagination to work)
+BASE_FORM_FIELDS = [
+    ('query.induCode', ''),
+    ('query.secCode', ''),
+    ('query.secName', ''),
+    ('query.bestAnalyst', 'false'),
+    ('query.indiCode', ''),
+    ('query.indiName', ''),
+    ('query.orgCode', ''),
+    ('query.orgName', ''),
+    ('query.due', 'false'),
+    ('priceLevel', '0'),
+]
+
 
 def fetch_page(page_num: int, session: requests.Session = None, retries: int = 3,
                last_query: str = '') -> Optional[str]:
-    """Fetch a single page of JLP data."""
-    data = {
-        'query.induCode': '',
-        'query.secCode': '',
-        'query.bestAnalyst': 'false',
-        'pageNum': str(page_num),
-        'priceLevel': '0',
-        'kd': '',
-    }
+    """Fetch a single page of JLP data using Form 1 fields."""
+    data = dict(BASE_FORM_FIELDS)
+    data['pageNum'] = str(page_num)
     if last_query:
         data['lastQuery'] = last_query
 
@@ -166,16 +174,22 @@ def _extract_reason(row) -> str:
     row_html = str(row)
     comments = re.findall(r'<!--(.*?)-->', row_html, re.DOTALL)
     for comment_html in comments:
-        if 'log1' in comment_html or 'td13' in comment_html:
-            # Try to get from title attribute of log1 link
+        if 'td13' in comment_html:
+            # Get from hidden div text (full reason)
+            div_match = re.search(r'<div[^>]*display\s*:\s*none[^>]*>(.*?)</div>', comment_html, re.DOTALL | re.I)
+            if div_match:
+                text = re.sub(r'<[^>]+>', '', div_match.group(1)).strip()
+                # Decode HTML entities
+                text = text.replace('&ldquo;', '"').replace('&rdquo;', '"')
+                text = text.replace('&mdash;', '—').replace('&middot;', '·')
+                text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+                text = re.sub(r'\s+', ' ', text).strip()
+                if text:
+                    return text
+            # Fallback: get from title attribute of log1 link
             title_match = re.search(r'action="log1"\s+title="([^"]*)"', comment_html)
             if title_match:
                 return title_match.group(1).strip()
-            # Try to get from hidden div text
-            div_match = re.search(r'<div[^>]*display:none[^>]*>(.*?)</div>', comment_html, re.DOTALL)
-            if div_match:
-                text = re.sub(r'<[^>]+>', '', div_match.group(1)).strip()
-                return text
     return ''
 
 
@@ -269,24 +283,34 @@ def _check_record_exists(cursor, record: Dict) -> bool:
 
 
 def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
-                   start_page: int = 1, batch_size: int = 50) -> dict:
+                   start_page: int = 1, batch_size: int = 50,
+                   mode_override: str = None, max_pages_override: int = None) -> dict:
     """
     Sync Sohu JLP data to PostgreSQL.
-    
+    Pagination requires submitting all Form 1 hidden fields.
+    lastQuery is extracted from page 1 and reused for all pages.
+
     Args:
         db_conn: Database connection
         mode: 'full' or 'incremental'
         max_pages: Max pages to sync (0=all)
         start_page: Starting page number
-        batch_size: Number of pages to batch insert
-    
+        batch_size: Pages per batch insert
+        mode_override: Override mode from engine config
+        max_pages_override: Override max_pages from engine config
+
     Returns:
         dict with sync statistics
     """
+    if mode_override:
+        mode = mode_override
+    if max_pages_override is not None:
+        max_pages = max_pages_override
+
     session = requests.Session()
     stats = {'total_records': 0, 'pages_synced': 0, 'errors': 0, 'new': 0, 'updated': 0}
 
-    # Get total pages and initial lastQuery
+    # Get total_pages and lastQuery from page 1
     html = fetch_page(1, session)
     if not html:
         logger.error('Failed to fetch page 1')
@@ -294,7 +318,7 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
 
     total_pages = get_total_pages(html)
     last_query = get_last_query(html)
-    logger.info(f'Total pages: {total_pages}, lastQuery: {last_query[:50]}...')
+    logger.info(f'JLP API: total_pages={total_pages}, lastQuery={last_query[:60]}...')
 
     if max_pages > 0:
         total_pages = min(total_pages, max_pages)
@@ -302,21 +326,15 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
     all_records = []
     cursor = db_conn.cursor()
     stop_sync = False
-    current_last_query = last_query
 
-    logger.info(f'Starting {mode} sync: total {total_pages} pages, batch_size={batch_size}')
+    logger.info(f'Starting {mode} sync: {total_pages} pages, batch_size={batch_size}')
 
     for page_num in range(start_page, total_pages + 1):
-        page_html = fetch_page(page_num, session, last_query=current_last_query)
+        page_html = fetch_page(page_num, session, last_query=last_query)
 
         if not page_html:
             stats['errors'] += 1
             continue
-
-        # Update lastQuery from each page response for proper pagination
-        new_lq = get_last_query(page_html)
-        if new_lq:
-            current_last_query = new_lq
 
         records = parse_page(page_html)
         stats['pages_synced'] += 1
@@ -334,16 +352,16 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
 
         all_records.extend(records)
 
-        # Batch insert
-        if len(all_records) >= batch_size * 13:  # ~13 records per page
+        # Batch insert every N pages
+        if len(all_records) >= batch_size * 13:
             count = _batch_upsert(cursor, all_records)
             stats['new'] += count
             db_conn.commit()
             all_records = []
 
-        # Progress log every 50 pages
-        if page_num % 50 == 0:
-            logger.info(f'JLP progress: page {page_num}/{total_pages} ({page_num*100//total_pages}%), records={stats["total_records"]}, new={stats["new"]}, errors={stats["errors"]}')
+        # Progress log
+        if page_num % 500 == 0 or page_num == total_pages:
+            logger.info(f'JLP progress: page {page_num}/{total_pages} ({page_num*100//total_pages}%), records={stats["total_records"]}, new={stats["new"]}')
 
         if stop_sync:
             logger.info(f'Incremental sync: reached existing data at page {page_num}, stopping')
@@ -371,7 +389,7 @@ def sync_sohu_jlp(db_conn, mode: str = 'incremental', max_pages: int = 0,
 
     cursor.close()
     session.close()
-    logger.info(f'Sync complete: {stats}')
+    logger.info(f'JLP sync complete: {stats}')
     return stats
 
 
