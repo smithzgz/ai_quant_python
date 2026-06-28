@@ -394,3 +394,35 @@ SELECT TO_DATE(SUBSTRING(ann_date, 1, 6), 'YYYYMM') AS time, ...
 ### 问题 8：Tushare API 分页数据与 DB 日期不一致
 **原因**: `cb_share` API 用 `end_date=X` 查询时返回跨多日期数据（最多 2000 行），但 DB 只存与查询日期匹配的行。
 **修复**: 对这类 API 设置 `"verify_sample_size": 0` 跳过自动验证。
+
+### 问题 9：`code_source` 表无 `list_status` 列
+**原因**: `_sync_by_code` 默认 `code_filter: "list_status = 'L'"`，但 `fx_obasic` 等非股票基础表没有此列。
+**修复**: 在 config 中显式设置 `"code_filter": "1=1"`。
+
+### 问题 10：VARCHAR 列长度不足
+**原因**: 建表时 VARCHAR(20) 太短，实际 API 返回更长的值（如 `trading_hours: "Sun 17.00 - Fri 16.55"`）。
+**修复**: 建表前先检查 API 实际数据长度，VARCHAR 用 50~100。已遇到：
+- `fx_obasic.trading_hours`: VARCHAR(20) → 改为 VARCHAR(100)
+
+### 问题 11：`fx_basic` API 不存在
+**原因**: Tushare 外汇基础信息 API 名是 `fx_obasic`（不是 `fx_basic`）。
+**修复**: 先用 `pro.fx_obasic()` 测试确认 API 名称。
+
+### 问题 12：API 分页限制导致数据不全
+**原因**: Tushare `fx_daily` API 每次最多返回 4000 行（最新数据），不传日期参数只得到近 4000 行。
+**修复**: 创建自定义同步函数 `fx_daily_sync.py`，每个品种调用 2 次 API：
+1. 不传日期 → 最新 4000 行
+2. 传 `start_date='20000101', end_date=最早日期-1天` → 历史数据
+
+### 问题 13：自定义同步函数 `sync_func` 路径格式
+**原因**: engine 用 `rsplit('.', 1)` 分割路径，格式必须是 `module.path.func_name`（全用点号）。
+**错误示例**: `data.sync.fx_daily_sync:sync_fx_daily`（冒号分隔）
+**正确示例**: `data.sync.fx_daily_sync.sync_fx_daily`（点号分隔）
+
+### 问题 14：自定义同步函数接口规范
+**函数签名**: `def sync_xxx(db_conn, mode='full', max_pages=0, batch_size=50, **kwargs) -> dict`
+- `db_conn`: psycopg2 原始连接（不是 SQLAlchemy 连接）
+- 返回值: `{"total_rows": N, ...}` 字典
+- 用 `db_conn.cursor()` 执行 SQL，不能用 `db_conn.execute(text())`
+- `df.to_sql()` 需要 SQLAlchemy engine，不能用 psycopg2 连接
+- 完整示例: `data/sync/fx_daily_sync.py`

@@ -143,9 +143,11 @@ CLASSIFICATION_MAP = {
     "cb_share": "可转债",
     "cb_daily": "可转债",
     "bond_cb_index": "可转债",
+    "fx_obasic": "外汇",
+    "fx_daily": "外汇",
 }
 
-CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "Analyst Recommendations", "可转债"]
+CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "Analyst Recommendations", "可转债", "外汇"]
 
 
 @router.get("/dashboard")
