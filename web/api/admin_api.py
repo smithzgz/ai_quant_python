@@ -138,9 +138,14 @@ CLASSIFICATION_MAP = {
     "index_weight": "指数成分",
     "sohu_jlp": "Analyst Recommendations",
     "eastmoney_report": "Analyst Recommendations",
+    "bond_basic": "可转债",
+    "cb_issue": "可转债",
+    "cb_share": "可转债",
+    "cb_daily": "可转债",
+    "bond_cb_index": "可转债",
 }
 
-CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "Analyst Recommendations"]
+CLASSIFICATION_ORDER = ["基础信息", "行情数据", "资金流向", "财务报表", "财务指标", "指数成分", "Analyst Recommendations", "可转债"]
 
 
 @router.get("/dashboard")
@@ -219,7 +224,7 @@ def task_detail(table_name: str, limit: int = Query(default=20, le=100)):
         )
         success_runs = (
             session.query(SyncLog)
-            .filter(SyncLog.table_name == table_name, SyncLog.status == "success")
+            .filter(SyncLog.table_name == table_name, SyncLog.status.in_(["success", "completed"]))
             .count()
         )
         failed_runs = (
@@ -429,7 +434,7 @@ def sync_stats():
     session = SessionLocal()
     try:
         total = session.query(SyncLog).count()
-        success = session.query(SyncLog).filter(SyncLog.status == "success").count()
+        success = session.query(SyncLog).filter(SyncLog.status.in_(["success", "completed"])).count()
         failed = session.query(SyncLog).filter(SyncLog.status == "failed").count()
         running = session.query(SyncLog).filter(SyncLog.status == "running").count()
         latest = (
@@ -517,6 +522,21 @@ def validate_table(table_name: str):
             conn.close()
     elif table_name == "eastmoney_report":
         from data.sync.eastmoney_report_sync import validate_coverage
+        import psycopg2
+        conn = psycopg2.connect(
+            host=settings.DB_HOST, port=settings.DB_PORT,
+            user=settings.DB_USER, password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
+        )
+        try:
+            cur = conn.cursor()
+            result = validate_coverage(cur)
+            cur.close()
+            return result
+        finally:
+            conn.close()
+    elif table_name == "bond_basic":
+        from data.sync.bond_sync import validate_coverage
         import psycopg2
         conn = psycopg2.connect(
             host=settings.DB_HOST, port=settings.DB_PORT,

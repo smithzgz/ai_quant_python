@@ -60,6 +60,18 @@ QUALITY_RULES = {
         "condition": "target_pricehigh >= target_pricelow",
         "level": "warn",
     },
+    "bond_par_value": {
+        "name": "转债面值检查",
+        "check_cols": ["par_value"],
+        "condition": "> 0",
+        "level": "fail",
+    },
+    "bond_coupon_rate": {
+        "name": "票面利率合理性",
+        "check_cols": ["coupon_rate"],
+        "threshold": 20.0,
+        "level": "warn",
+    },
 }
 
 
@@ -169,6 +181,24 @@ def check_target_price合理性(df, rule_cfg):
     return issues
 
 
+def check_bond_par_value(df, rule_cfg):
+    issues = []
+    if "par_value" in df.columns:
+        bad = (df["par_value"] <= 0).sum()
+        if bad > 0:
+            issues.append(f"{bad} rows with par_value <= 0")
+    return issues
+
+
+def check_bond_coupon_rate(df, rule_cfg):
+    issues = []
+    if "coupon_rate" in df.columns:
+        extreme = (df["coupon_rate"].abs() > rule_cfg["threshold"]).sum()
+        if extreme > 0:
+            issues.append(f"column 'coupon_rate' has {extreme} values exceeding {rule_cfg['threshold']}%")
+    return issues
+
+
 RULE_CHECKERS = {
     "no_null_price": check_no_null_price,
     "positive_volume": check_positive_volume,
@@ -179,4 +209,6 @@ RULE_CHECKERS = {
     "reasonable_pe": check_reasonable_pe,
     "valid_rating": check_valid_rating,
     "target_price合理性": check_target_price合理性,
+    "bond_par_value": check_bond_par_value,
+    "bond_coupon_rate": check_bond_coupon_rate,
 }

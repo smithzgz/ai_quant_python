@@ -114,11 +114,12 @@ class SyncVerifier:
             return self.client.call(api_name, **{date_type: d_str}, fields=fields_str, **extra_params)
 
     def _fetch_from_db(self, table_name, d, date_field):
+        d_str = d.strftime("%Y%m%d")
         with engine.connect() as conn:
             from sqlalchemy import text
             result = conn.execute(
                 text(f"SELECT * FROM {table_name} WHERE {date_field} = :d"),
-                {"d": d},
+                {"d": d_str},
             )
             cols = result.keys()
             rows = result.fetchall()

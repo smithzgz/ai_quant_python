@@ -112,7 +112,11 @@ tr:hover td{background:#1c2128}
         <div class="detail-stat"><div class="dl">Success</div><div class="dv" style="color:#3fb950" id="dm-success">0</div></div>
         <div class="detail-stat"><div class="dl">Failed</div><div class="dv" style="color:#f85149" id="dm-failed">0</div></div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <select id="dm-mode-select" style="background:#0d1117;border:1px solid #30363d;color:#e1e4e8;padding:6px 10px;border-radius:6px;font-size:13px">
+          <option value="incremental">Incremental (增量)</option>
+          <option value="full">Full (全量, 清空后重导)</option>
+        </select>
         <button class="btn primary" id="dm-run-btn" onclick="dmRun()">Run</button>
         <button class="btn danger" id="dm-stop-btn" onclick="dmStop()" style="display:none">Stop</button>
       </div>
@@ -232,6 +236,7 @@ async function openDetail(name) {
   document.getElementById('dm-failed').textContent = d.stats.failed;
   document.getElementById('dm-run-btn').disabled = d.status === 'running';
   document.getElementById('dm-stop-btn').style.display = d.status === 'running' ? 'inline-block' : 'none';
+  document.getElementById('dm-mode-select').value = d.config.mode || 'incremental';
 
   const hr = document.getElementById('dm-history');
   hr.innerHTML = d.history.length ? d.history.map(r => {
@@ -260,7 +265,9 @@ function closeDetailModal() { document.getElementById('detail-modal').classList.
 
 async function dmRun() {
   if (!dmTaskName) return;
-  const r = await fetch(`${API}/trigger/${dmTaskName}`, {method:'POST'});
+  const mode = document.getElementById('dm-mode-select').value;
+  if (mode === 'full' && !confirm(`确定要对 ${dmTaskName} 执行全量同步吗？\n\n这将清空该表的所有历史数据！`)) return;
+  const r = await fetch(`${API}/trigger/${dmTaskName}?mode=${mode}`, {method:'POST'});
   const d = await r.json();
   if (d.error) { alert(d.error); return; }
   openDetail(dmTaskName);
