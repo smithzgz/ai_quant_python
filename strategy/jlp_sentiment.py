@@ -20,7 +20,11 @@ def prepare_sentiment_data(conn, ts_code: str = None) -> pd.DataFrame:
     准备研报情绪数据。
     返回 DataFrame: columns = [trade_date, ts_code, avg_target, sentiment_ma, delta]
     """
-    where = f"WHERE ts_code = '{ts_code}'" if ts_code else ""
+    where = ""
+    params = {}
+    if ts_code:
+        where = "WHERE ts_code = %(ts_code)s"
+        params["ts_code"] = ts_code
     sql = f"""
         SELECT 
             comment_date AS trade_date,
@@ -36,7 +40,7 @@ def prepare_sentiment_data(conn, ts_code: str = None) -> pd.DataFrame:
         GROUP BY comment_date, ts_code
         ORDER BY ts_code, comment_date
     """
-    df = pd.read_sql(sql, conn)
+    df = pd.read_sql(sql, conn, params=params)
     
     if df.empty:
         return df
@@ -112,14 +116,19 @@ def get_daily_prices(conn, ts_codes: list, start_date: str = None, end_date: str
     获取日线价格数据。
     返回 DataFrame: columns = [trade_date, ts_code, open, high, low, close, vol]
     """
-    codes_str = "','".join(ts_codes)
-    where_parts = [f"ts_code IN ('{codes_str}')"]
+    where_parts = []
+    params = {}
+    if ts_codes:
+        where_parts.append("ts_code = ANY(%(codes)s)")
+        params["codes"] = list(ts_codes)
     if start_date:
-        where_parts.append(f"trade_date >= '{start_date}'")
+        where_parts.append("trade_date >= %(start_date)s")
+        params["start_date"] = start_date
     if end_date:
-        where_parts.append(f"trade_date <= '{end_date}'")
+        where_parts.append("trade_date <= %(end_date)s")
+        params["end_date"] = end_date
     
-    where = " AND ".join(where_parts)
+    where = " AND ".join(where_parts) if where_parts else "TRUE"
     
     sql = f"""
         SELECT 
@@ -134,7 +143,7 @@ def get_daily_prices(conn, ts_codes: list, start_date: str = None, end_date: str
         WHERE {where}
         ORDER BY ts_code, trade_date
     """
-    return pd.read_sql(sql, conn)
+    return pd.read_sql(sql, conn, params=params)
 
 
 def run_backtest(conn,

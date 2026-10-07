@@ -100,28 +100,43 @@ class BacktestPersistor:
         if trades_df is None or trades_df.empty:
             return
 
+        has_new_schema = "Entry Timestamp" in trades_df.columns
         records = []
         for idx, row in trades_df.iterrows():
-            entry_time = self._parse_vbt_time(row.get("Entry Index"))
-            exit_time = self._parse_vbt_time(row.get("Exit Index"))
+            if has_new_schema:
+                entry_time = self._parse_vbt_time(row.get("Entry Timestamp"))
+                exit_time = self._parse_vbt_time(row.get("Exit Timestamp"))
+                fees = float(row.get("Entry Fees") or 0) + float(row.get("Exit Fees") or 0)
+                direction = str(row.get("Direction") or "long").lower()
+            else:
+                entry_time = self._parse_vbt_time(row.get("Entry Index"))
+                exit_time = self._parse_vbt_time(row.get("Exit Index"))
+                fees = float(row.get("Fees") or 0)
+                direction = "long"
 
             col_val = str(row.get("Column", ""))
             symbol = self._extract_symbol(col_val)
+
+            ret = row.get("Return")
+            ret = float(ret) if pd.notna(ret) else None
+
+            exit_price = row.get("Avg Exit Price")
+            exit_price = float(exit_price) if pd.notna(exit_price) else None
 
             records.append(TradeRecord(
                 run_id=run_id,
                 trade_idx=idx,
                 symbol=symbol,
-                direction="long",
+                direction=direction,
                 entry_time=entry_time,
                 exit_time=exit_time,
-                entry_price=float(row.get("Avg Entry Price", 0)),
-                exit_price=float(row.get("Avg Exit Price", 0)),
-                size=float(row.get("Size", 0)),
-                pnl=float(row.get("PnL", 0)),
-                return_pct=float(row.get("Return", 0)) * 100 if abs(row.get("Return", 0)) < 1 else float(row.get("Return", 0)),
-                fees=float(row.get("Fees", 0)),
-                duration_bars=int(row.get("Duration", 0)) if pd.notna(row.get("Duration")) else None,
+                entry_price=float(row.get("Avg Entry Price") or 0),
+                exit_price=exit_price,
+                size=float(row.get("Size") or 0),
+                pnl=float(row.get("PnL") or 0),
+                return_pct=ret * 100.0 if ret is not None else None,
+                fees=fees,
+                duration_bars=None,
             ))
 
         session.bulk_save_objects(records)
@@ -140,29 +155,38 @@ class BacktestPersistor:
         if equity is None:
             return
 
-        records = []
-
         if isinstance(equity, pd.DataFrame):
-            equity_series = equity.mean(axis=1)
+            equity_series = equity.iloc[:, 0] if equity.shape[1] == 1 else equity.sum(axis=1)
         else:
             equity_series = equity
 
-        if drawdown is not None and isinstance(drawdown, pd.DataFrame):
-            drawdown = drawdown.mean(axis=1)
+        equity_series = equity_series.astype(float)
 
-        if returns is not None and isinstance(returns, pd.DataFrame):
-            returns = returns.mean(axis=1)
+        if isinstance(drawdown, pd.Series):
+            dd_series = drawdown.astype(float)
+        else:
+            dd_series = equity_series / equity_series.cummax() - 1.0
 
+        if isinstance(returns, pd.Series):
+            ret_series = returns.astype(float)
+        else:
+            ret_series = equity_series.pct_change().fillna(0.0)
+
+        records = []
         for ts, val in equity_series.items():
-            dd_val = float(drawdown.loc[ts]) if drawdown is not None and ts in drawdown.index else 0
-            ret_val = float(returns.loc[ts]) if returns is not None and ts in returns.index else 0
+            dd_val = float(dd_series.loc[ts]) if ts in dd_series.index else 0.0
+            ret_val = float(ret_series.loc[ts]) if ts in ret_series.index else 0.0
+            if pd.isna(dd_val):
+                dd_val = 0.0
+            if pd.isna(ret_val):
+                ret_val = 0.0
 
             records.append(EquityCurve(
                 run_id=run_id,
                 timestamp=self._parse_vbt_time(ts),
                 equity_value=float(val),
-                drawdown=float(dd_val) if not pd.isna(dd_val) else 0,
-                daily_return=float(ret_val) * 100 if not pd.isna(ret_val) and abs(ret_val) < 1 else float(ret_val) if not pd.isna(ret_val) else 0,
+                drawdown=dd_val * 100.0,
+                daily_return=ret_val * 100.0,
             ))
 
         session.bulk_save_objects(records)

@@ -107,7 +107,7 @@ DATA_SYNC_TASKS = {
 | `connection.py` | SQLAlchemy引擎 + Session工厂，从 `settings.py` 读取连接参数 | 被所有数据层模块使用 |
 | `models.py` | ORM模型定义（275行），定义13张表的结构 | 被 `sync/engine.py`、`backtest/storage/` 使用 |
 | `timescale.py` | TimescaleDB超表创建、压缩策略、连续聚合 | 被 `scripts/init_db.py` 调用 |
-| `base_repo.py` | 基础仓储类，提供 `bulk_upsert_df()` 批量插入 | 被回测结果存储使用 |
+| `base_repo.py` | 基础仓储类，提供 `get_latest_date()`/`count_rows()` 查询工具 | 被 sync/engine.py 使用 |
 
 **`models.py` 中的13张表：**
 
@@ -141,9 +141,9 @@ DATA_SYNC_TASKS = {
 └── PositionSnapshot  # 持仓快照
 ```
 
-**额外创建的表（非ORM，SQL创建）：**
-- `daily_qfq` - 前复权日线（1780万行）
-- `daily_hfq` - 后复权日线（1780万行）
+**额外创建的视图（非ORM，SQL定义）：**
+- `daily_qfq` - 前复权日线视图（查询时由 daily × adj_factor 实时计算，每股票取各自最新因子；禁止 INSERT/物化）
+- `daily_hfq` - 后复权日线视图（同上）
 
 ### 4. `data/sync/` - 数据同步模块
 
@@ -288,8 +288,7 @@ Panel 7-12: Stats             (stat)        - 最新价/涨跌幅/成交量/成�
 | `init_db.py` | 初始化数据库：创建所有表、配置TimescaleDB |
 | `run_sync.py` | CLI同步：同步单表/全部表 |
 | `run_full_sync.py` | 全量重刷：重置断点到1991年，顺序同步所有表 |
-| `create_adjusted_tables.py` | 创建前复权/后复权表结构 |
-| `batch_adjusted.py` | 批量计算前复权/后复权价格（从daily+adj_factor） |
+| `migrate_adjusted_views.py` | 迁移/校验 daily_qfq、daily_hfq 复权视图（`--verify` 只读校验） |
 | `recover_pre2003_daily.py` | 恢复2003年以前缺失的日线数据 |
 | `run_backtest_all.py` | 全量历史回测：选前50只股票，运行所有策略 |
 | `check_*.py` | 各类数据检查脚本（状态/类型/schema/覆盖度） |
@@ -312,8 +311,8 @@ Tushare API
     ▼
 data/sync/engine.py ──→ PostgreSQL (daily, daily_basic, adj_factor, ...)
     │                          │
-    │                          ├── daily_qfq (前复权，SQL计算)
-    │                          └── daily_hfq (后复权，SQL计算)
+    │                          ├── daily_qfq (前复权视图，查询时计算)
+    │                          └── daily_hfq (后复权视图，查询时计算)
     │
     ▼
 data/quality/checker.py ──→ DataQualityLog
@@ -344,8 +343,8 @@ stock_basic (股票基本信息)
     │
     ├── daily (日线行情) ──┐
     │                      ├── adj_factor (复权因子)
-    │                      │       ├── daily_qfq (前复权)
-    │                      │       └── daily_hfq (后复权)
+    │                      │       ├── daily_qfq (前复权视图)
+    │                      │       └── daily_hfq (后复权视图)
     │                      │
     ├── daily_basic (每日指标)
     ├── moneyflow (资金流向)
@@ -381,7 +380,7 @@ DB_PORT=5432
 DB_NAME=quant_db
 DB_USER=postgres
 DB_PASSWORD=postgres
-TUSHARE_TOKEN=596dc52bf2356c6241077de51b61fea2c0ceeb1eebd6d78ec88e9832
+TUSHARE_TOKEN=<your-tushare-token>   # 注意：真实token不要写入任何文档/代码，仅在 .env 中配置
 LOG_DIR=D:\code\Python\ai_quant_python\logs
 ```
 

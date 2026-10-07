@@ -14,9 +14,18 @@ logger = get_logger("result_extractor")
 def extract_results(pf: vbt.Portfolio, config: dict) -> dict:
     stats = pf.stats()
 
+    total_return = float(stats.get("Total Return [%]", 0))
+    annual_return = None
+    start = stats.get("Start")
+    end = stats.get("End")
+    if start is not None and end is not None and total_return > -100:
+        days = (pd.Timestamp(end) - pd.Timestamp(start)).days
+        if days > 0:
+            annual_return = ((1 + total_return / 100.0) ** (365.0 / days) - 1) * 100.0
+
     result = {
-        "total_return": float(stats.get("Total Return [%]", 0)),
-        "annual_return": float(stats.get("Annualized Return [%]", 0)) if "Annualized Return [%]" in stats else None,
+        "total_return": total_return,
+        "annual_return": annual_return,
         "max_drawdown": float(stats.get("Max Drawdown [%]", 0)),
         "sharpe_ratio": float(stats.get("Sharpe Ratio", 0)) if "Sharpe Ratio" in stats else None,
         "sortino_ratio": float(stats.get("Sortino Ratio", 0)) if "Sortino Ratio" in stats else None,

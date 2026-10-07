@@ -65,30 +65,34 @@ def load_data_from_db(start_date='2020-01-01', end_date='2026-06-30', top_n=50):
     )
     
     # 先选出成交量最大的N只股票
-    sql = f"""
+    sql = """
         SELECT ts_code, SUM(vol) as total_vol
         FROM daily
-        WHERE trade_date >= '{start_date.replace('-','')}'
-          AND trade_date <= '{end_date.replace('-','')}'
+        WHERE trade_date >= %(start)s AND trade_date <= %(end)s
         GROUP BY ts_code
         HAVING COUNT(*) > 100
         ORDER BY total_vol DESC
-        LIMIT {top_n}
+        LIMIT %(top_n)s
     """
-    top_codes = pd.read_sql(sql, conn)['ts_code'].tolist()
+    params = {
+        "start": start_date.replace('-', ''),
+        "end": end_date.replace('-', ''),
+        "top_n": top_n,
+    }
+    top_codes = pd.read_sql(sql, conn, params=params)['ts_code'].tolist()
     logger.info(f"选出 {len(top_codes)} 只流动性最好的股票")
     
     # 加载这些股票的日线数据
-    codes_str = "','".join(top_codes)
-    sql = f"""
+    sql = """
         SELECT trade_date, ts_code, open, high, low, close, vol
         FROM daily
-        WHERE ts_code IN ('{codes_str}')
-          AND trade_date >= '{start_date.replace('-','')}'
-          AND trade_date <= '{end_date.replace('-','')}'
+        WHERE ts_code = ANY(%(codes)s)
+          AND trade_date >= %(start)s
+          AND trade_date <= %(end)s
         ORDER BY ts_code, trade_date
     """
-    df = pd.read_sql(sql, conn)
+    params["codes"] = top_codes
+    df = pd.read_sql(sql, conn, params=params)
     conn.close()
     
     logger.info(f"加载 {len(df)} 条记录, {df['ts_code'].nunique()} 只股票")

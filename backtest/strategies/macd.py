@@ -18,7 +18,7 @@ class MACD(StrategyBase):
         slow_window = config.get("slow_window", 26)
         signal_window = config.get("signal_window", 9)
 
-        close = data["close"]
+        close = data.get("adj_close", data.get("close"))
 
         macd = vbt.MACD.run(close, fast_window=fast_window,
                              slow_window=slow_window, signal_window=signal_window)

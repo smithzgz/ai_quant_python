@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import threading
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +11,18 @@ from web.api.quality_api import router as quality_router
 from web.api.admin_api import router as admin_router
 import os
 
-app = FastAPI(title="AI Quant Python", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from data.sync.scheduler import create_scheduler
+    sched = create_scheduler()
+    t = threading.Thread(target=sched.start, daemon=True, name="scheduler")
+    t.start()
+    print("[Scheduler] Started in background thread")
+    yield
+
+
+app = FastAPI(title="AI Quant Python", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,15 +39,6 @@ app.include_router(admin_router, prefix="/admin/api", tags=["管理后台"])
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-
-@app.on_event("startup")
-def start_scheduler():
-    from data.sync.scheduler import create_scheduler
-    sched = create_scheduler()
-    t = threading.Thread(target=sched.start, daemon=True, name="scheduler")
-    t.start()
-    print("[Scheduler] Started in background thread")
 
 
 @app.get("/")

@@ -5,11 +5,11 @@
 独立表 eastmoney_report，全量同步 2017-2026
 """
 import time
-import logging
 import requests
 from typing import List, Dict, Optional
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("eastmoney_sync")
 
 EASTMONEY_API_URL = 'https://reportapi.eastmoney.com/report/list'
 HEADERS = {
@@ -151,6 +151,15 @@ def _batch_upsert(cursor, records: List[Dict]) -> int:
     return count
 
 
+def _check_record_exists(cursor, record: Dict) -> bool:
+    """Check if a record already exists in the database."""
+    cursor.execute(
+        "SELECT 1 FROM eastmoney_report WHERE ts_code=%s AND analyst=%s AND broker=%s AND publish_date=%s AND info_code=%s",
+        (record['ts_code'], record['analyst'], record['broker'], record['publish_date'], record['info_code'])
+    )
+    return cursor.fetchone() is not None
+
+
 def validate_coverage(cursor) -> dict:
     """Validate eastmoney_report data coverage by year and month. Returns gap report."""
     cursor.execute("""
@@ -199,20 +208,29 @@ def sync_eastmoney_reports(db_conn, mode: str = 'full', max_pages: int = 0,
 
     Args:
         db_conn: Database connection
+        mode: 'full' or 'incremental' (incremental stops when hitting existing records)
+        max_pages: Max pages per year (0=all)
         start_year: Start year (default 2017)
         end_year: End year (default 2026)
         batch_size: Batch insert size
-        mode_override: Ignored
-        max_pages_override: Max pages per year (0=all)
+        mode_override: Override mode from engine config
+        max_pages_override: Override max_pages from engine config
 
     Returns:
         dict with sync statistics
     """
+    if mode_override:
+        mode = mode_override
+    if max_pages_override is not None:
+        max_pages = max_pages_override
+
     session = requests.Session()
     stats = {'total_records': 0, 'pages_synced': 0, 'errors': 0, 'new': 0, 'years': {}}
 
     all_records = []
     cursor = db_conn.cursor()
+
+    logger.info(f'Starting {mode} sync for Eastmoney reports')
 
     for year in range(start_year, end_year + 1):
         logger.info(f'Syncing Eastmoney reports for {year}...')
@@ -220,7 +238,7 @@ def sync_eastmoney_reports(db_conn, mode: str = 'full', max_pages: int = 0,
         year_total = 0
 
         while True:
-            if max_pages_override and max_pages_override > 0 and page_no > max_pages_override:
+            if max_pages and max_pages > 0 and page_no > max_pages:
                 break
 
             data = fetch_page(year, page_no, page_size=50, session=session)
@@ -244,6 +262,9 @@ def sync_eastmoney_reports(db_conn, mode: str = 'full', max_pages: int = 0,
                 stats['new'] += count
                 db_conn.commit()
                 all_records = []
+
+            if page_no % 100 == 0:
+                logger.info(f'  {year} page {page_no} ({page_no*50}/{total_hits}), year_total={year_total}')
 
             if page_no * 50 >= total_hits:
                 break

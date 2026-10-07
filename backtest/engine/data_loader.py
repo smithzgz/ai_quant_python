@@ -58,4 +58,4 @@ class DataLoader:
 
         adj_close = close * adj_factor / adj_factor.iloc[-1]
         adj_close = adj_close.replace([float("inf"), float("-inf")], float("nan"))
-        return adj_close.fillna(method="ffill")
+        return adj_close.ffill()

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import chardet
 from datetime import datetime, date
 from fastapi import APIRouter, Query, BackgroundTasks
 from data.database.connection import engine, SessionLocal
@@ -65,11 +64,7 @@ def _read_log_file(filepath, lines=200, keyword=None):
     raw = open(filepath, "rb").read()
     if not raw:
         return 0, ""
-    det = chardet.detect(raw)
-    enc = det.get("encoding", "utf-8") or "utf-8"
-    if enc.lower() in ("ascii",):
-        enc = "utf-8"
-    text = raw.decode(enc, errors="replace")
+    text = raw.decode("utf-8", errors="replace")
     all_lines = text.splitlines(keepends=True)
     if keyword:
         kw = keyword.lower()
@@ -327,11 +322,7 @@ def task_logs(
     raw = open(log_file, "rb").read()
     if not raw:
         return {"table_name": table_name, "lines": 0, "content": ""}
-    det = chardet.detect(raw)
-    enc = det.get("encoding", "utf-8") or "utf-8"
-    if enc.lower() in ("ascii",):
-        enc = "utf-8"
-    text = raw.decode(enc, errors="replace")
+    text = raw.decode("utf-8", errors="replace")
     all_lines = text.splitlines(keepends=True)
     table_lower = table_name.lower()
     matched = [l for l in all_lines if table_lower in l.lower()]

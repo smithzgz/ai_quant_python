@@ -1,15 +1,34 @@
 # -*- coding: utf-8 -*-
 from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_MISSED
 from apscheduler.triggers.cron import CronTrigger
 from data.sync.engine import SyncEngine
 from config.data_sync_config import DATA_SYNC_TASKS
 from utils.logger import get_logger
+import traceback
 
 logger = get_logger("scheduler")
 
 
+def job_error_listener(event):
+    logger.error(f"Job {event.job_id} failed: {event.exception}")
+    logger.error(traceback.format_exception(type(event.exception), event.exception, event.traceback))
+
+
+def job_missed_listener(event):
+    logger.warning(f"Job {event.job_id} missed! Scheduled: {event.scheduled_run_time}")
+
+
 def create_scheduler() -> BlockingScheduler:
-    scheduler = BlockingScheduler()
+    scheduler = BlockingScheduler(
+        job_defaults={
+            'coalesce': True,
+            'max_instances': 1,
+        }
+    )
+    scheduler.add_listener(job_error_listener, EVENT_JOB_ERROR)
+    scheduler.add_listener(job_missed_listener, EVENT_JOB_MISSED)
+
     engine = SyncEngine()
 
     for table_name, cfg in DATA_SYNC_TASKS.items():

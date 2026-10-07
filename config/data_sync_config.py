@@ -737,8 +737,8 @@ DATA_SYNC_TASKS = {
     "eastmoney_report": {
         "name": "东方财富研报评级",
         "api": "eastmoney_report",
-        "mode": "full",
-        "schedule": "0 9 * * 1",
+        "mode": "incremental",
+        "schedule": "0 9 * * *",
         "priority": 20,
         "verify_sample_size": 5,
         "sync_func": "data.sync.eastmoney_report_sync.sync_eastmoney_reports",

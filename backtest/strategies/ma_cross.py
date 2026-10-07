@@ -17,7 +17,7 @@ class MACross(StrategyBase):
         fast_window = config.get("fast_window", 10)
         slow_window = config.get("slow_window", 50)
 
-        close = data["close"]
+        close = data.get("adj_close", data.get("close"))
 
         fast_ma = vbt.MA.run(close, fast_window)
         slow_ma = vbt.MA.run(close, slow_window)

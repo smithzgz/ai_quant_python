@@ -31,7 +31,7 @@ def run_multi_strategy_backtest():
         },
         {
             'name': 'momentum',
-            'config': {'lookback_window': 20, 'threshold': 0.02}
+            'config': {'lookback': 20, 'top_k': 3}
         }
     ]
 
