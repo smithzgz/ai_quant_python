@@ -32,7 +32,8 @@ class VBTEngine:
 
     def run(self, strategy_name: str, symbols: list, start: str, end: str,
             strategy_config: dict = None, init_cash: float = 100000.0,
-            commission_rate: float = None, slippage_rate: float = None) -> int:
+            commission_rate: float = None, slippage_rate: float = None,
+            freq: str = "1D") -> int:
 
         if commission_rate is None:
             commission_rate = AShareBroker.get_vbt_fees()
@@ -60,7 +61,7 @@ class VBTEngine:
             entries=entries,
             exits=exits,
             init_cash=init_cash,
-            freq="1D",
+            freq=freq,
             fees=commission_rate,
             slippage=slippage_rate,
             accumulate=True,

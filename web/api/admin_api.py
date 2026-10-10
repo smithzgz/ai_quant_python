@@ -124,6 +124,7 @@ CLASSIFICATION_MAP = {
     "index_weekly": "行情数据",
     "index_monthly": "行情数据",
     "index_dailybasic": "行情数据",
+    "stk_mins_5min": "行情数据",
     "moneyflow": "资金流向",
     "income": "财务报表",
     "balancesheet": "财务报表",

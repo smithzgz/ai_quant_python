@@ -1,0 +1,141 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "panels": [],
+      "title": "5 分钟 K 线",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "fieldConfig": { "defaults": { "custom": { "candleStyle": "candles" } }, "overrides": [] },
+      "gridPos": { "h": 14, "w": 18, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "candleStyle": "candles",
+        "mode": "candles"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  trade_time AS time,\n  open AS open,\n  high AS high,\n  low AS low,\n  close AS close,\n  vol AS volume\nFROM stk_mins_5min\nWHERE ts_code = '$ts_code'\n  AND $__timeFilter(trade_time)\nORDER BY trade_time",
+          "refId": "A"
+        }
+      ],
+      "title": "5min K-Line ($ts_code) — 单股 + 时间范围约束，禁全表扫描",
+      "type": "candlestick"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "gridPos": { "h": 14, "w": 6, "x": 18, "y": 1 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  trade_time AS time,\n  vol AS \"成交量(股)\"\nFROM stk_mins_5min\nWHERE ts_code = '$ts_code'\n  AND $__timeFilter(trade_time)\nORDER BY trade_time",
+          "refId": "A"
+        }
+      ],
+      "title": "5min Volume ($ts_code)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 200,
+      "panels": [],
+      "title": "15 / 60 分钟（由 5min 查询时上卷，无独立存储）",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 16 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time_bucket('15 minutes', trade_time, 'Asia/Shanghai') AS time,\n  last(close, trade_time) AS \"close 15min\"\nFROM stk_mins_5min\nWHERE ts_code = '$ts_code'\n  AND $__timeFilter(trade_time)\nGROUP BY 1\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "15min Close ($ts_code)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 16 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time_bucket('60 minutes', trade_time, 'Asia/Shanghai') AS time,\n  last(close, trade_time) AS \"close 60min\"\nFROM stk_mins_5min\nWHERE ts_code = '$ts_code'\n  AND $__timeFilter(trade_time)\nGROUP BY 1\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "60min Close ($ts_code)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["kline", "minute"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "000001.SZ", "value": "000001.SZ" },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "bfpbii1tm9ou8c" },
+        "definition": "SELECT ts_code FROM stock_basic WHERE list_status='L' ORDER BY ts_code LIMIT 1000",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Stock Code",
+        "multi": false,
+        "name": "ts_code",
+        "options": [],
+        "query": "SELECT ts_code FROM stock_basic WHERE list_status='L' ORDER BY ts_code LIMIT 1000",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-5d", "to": "now" },
+  "timepicker": {},
+  "timezone": "Asia/Shanghai",
+  "title": "Stock Minute K-Line (5min)",
+  "uid": "stock-kline-mins",
+  "version": 1,
+  "weekStart": ""
+}

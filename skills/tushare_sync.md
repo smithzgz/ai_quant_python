@@ -210,6 +210,21 @@ CLASSIFICATION_ORDER = ["基础信息", "行情数据", ..., "分类名称"]
 1. Truncate or upsert all data
 2. No checkpoint (or reset checkpoint)
 
+### By-Code 增量模式（api_date_type: "code"）
+- `_sync_by_code` 不再每次全量重拉：以 `sync_checkpoint` 日期减 `sync_overlap_days`（默认 3）天作为 `start_date` 传给 API（按 ann_date/trade_date 区间语义，视 API 而定；cb_share 按 publish_date 区间）。
+- 任一 code 失败（客户端 3 次重试后）则本次**不推进 checkpoint**，下次运行用旧窗口自动重试；全部成功才更新为当天。
+- 首次运行（无 checkpoint 且无数据）仍为全量。
+
+### 逐日增量失败语义（防数据缺口）
+- `_sync_incremental` 中某交易日失败：若此前无任何成功写入则快速中止（checkpoint 不动）；否则继续同步后续日期，结束后将 checkpoint **回滚到首个失败日前一天**并标记失败，下次运行自动重补缺口（此前失败日会被 checkpoint 越过、永久丢失）。
+- cancel 异常不受影响，立即中止。
+
+### 启动补同步（catch-up）
+- `create_scheduler` 额外注册一次性任务 `sync_startup_catchup`：进程启动 90 秒后调用 `engine.sync(stale_days=2)`，**仅同步 checkpoint（无 checkpoint 则看最近一次成功同步）落后超过 2 天的表**，按 priority 顺序串行执行。
+- 新鲜表只做一次 checkpoint 查询即跳过，平时重启无 API 消耗；长时间停机后重启自动追平所有缺口，不必等 cron 到点（周线/月线表尤其受益）。
+- `RUNNING_SYNCS` 经 `_SYNC_LOCK` 加锁：补同步与 cron / Web 手动触发并发时，同一张表只会跑一个实例（防 `_tmp_*` 临时表互相覆盖）。
+- 验证 Web 层仍必须先 stub `data.sync.scheduler.create_scheduler`（红线不变，补同步任务也在其中）。
+
 ## 7. Debugging
 
 ### Check Task Status
@@ -294,9 +309,22 @@ When adding a new sync source:
 - [ ] `visualization/grafana/dashboards/xxx.json` - Dashboard
 - [ ] Restart uvicorn to load changes
 
+## 9.5 Minute Data Sync (stk_mins_5min, baostock)
+
+分钟数据链路详见 `MINUTE_DATA_PLAN.md`（V1.2）。与 Tushare 链路的关键差异：
+
+- **数据源是 baostock（免费）**，非 Tushare。Tushare `stk_mins` 限流 1 次/小时，已否决。
+- 任务走 `sync_func: data.sync.minute_sync.sync_nightly`（`_sync_custom` 路径），夜间 19:00 全市场从 per-code checkpoint 续采至今日（宕机多久补多久，无上限）。
+- **写入统一走 `data/sync/bulk_writer.py`（COPY 化）**：`engine._write_df` 也已委托它，日线同步同样受益。单批 5 万行 ≤2s。
+- baostock 特性（M0 实测）：bar time 为结束时刻（入库转起始 -5min）；vol 单位**股**（daily.vol 是手，差 100 倍）；**5min 不含收盘竞价**（末根 close ≠ daily close 属正常）；全局单连接不可多线程；停牌=空数据+err=0（推进 checkpoint）。
+- `sync_code_checkpoint` 表：按股票断点（区别于 `sync_checkpoint` 表级断点）。
+- 回填/收尾：`python scripts/backfill_mins.py --universe hs300 --start <日期>`；完成后 `--finalize`（逐块压缩+挂策略+按月刷 cagg）。**回填期间绝不挂压缩策略**（chunk 反复解压/重压会崩掉写入性能）。
+- 压缩基准实测：30d chunk 压缩比 3.7x（10 年全市场 5min ≈ 14GB）。验收线 ≥3x。
+- 环境注意：本机 PG16（原生 Windows 服务）已于 2026-10-08 安装 TimescaleDB 2.30.2 扩展（此前 setup_timescale 一直静默降级为普通 PG）；`shared_preload_libraries='timescaledb'` 已写入 postgresql.auto.conf。Timescale 2.30 API 口径：`compress_chunk`/`decompress_chunk` 是**函数**（SELECT），`refresh_continuous_aggregate` 是**过程**（CALL）；cagg 压缩配置用 `ALTER MATERIALIZED VIEW`；chunk 信息在 `timescaledb_information.dimensions.time_interval`。
+
 ## 10. Restart Procedure
 
-修改 `config/data_sync_config.py` 后必须重启 FastAPI 才能生效。
+修改 `config/data_sync_config.py` 后必须重启 FastAPI 才能生效。重启 90 秒后会自动补同步所有 checkpoint 落后超过 2 天的表（长时间停机后的第一次重启会触发较长的追平同步，属预期行为）。
 
 ### 检查是否有正在运行的 task
 ```python

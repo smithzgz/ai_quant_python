@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import threading
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from sqlalchemy import func
 from data.database.connection import engine, SessionLocal
 from data.database.base_repo import BaseRepo
 from data.database.models import SyncLog, SyncCheckpoint
@@ -12,6 +14,7 @@ logger = get_logger("sync_engine")
 
 # Global registry: table_name -> {"running": bool, "cancel": bool}
 RUNNING_SYNCS = {}
+_SYNC_LOCK = threading.Lock()
 
 
 def _convert_dates(df, cfg):
@@ -30,7 +33,21 @@ class SyncEngine:
         self.client = TushareClient()
         self.repo = BaseRepo(None)
 
-    def sync(self, table_name: str = None, mode: str = None, max_pages: int = None, cancel_check=None):
+    @staticmethod
+    def _acquire(table_name: str) -> bool:
+        with _SYNC_LOCK:
+            state = RUNNING_SYNCS.get(table_name)
+            if state and state.get("running"):
+                return False
+            RUNNING_SYNCS[table_name] = {"running": True, "cancel": False}
+            return True
+
+    @staticmethod
+    def _release(table_name: str) -> None:
+        with _SYNC_LOCK:
+            RUNNING_SYNCS.pop(table_name, None)
+
+    def sync(self, table_name: str = None, mode: str = None, max_pages: int = None, cancel_check=None, stale_days: int = None):
         if table_name:
             cfg = DATA_SYNC_TASKS.get(table_name)
             if not cfg:
@@ -39,16 +56,21 @@ class SyncEngine:
             if not cfg.get("enabled", True):
                 logger.info(f"Table {table_name} is disabled, skipping")
                 return
+            if not self._acquire(table_name):
+                logger.warning(f"{table_name}: sync already running, skip")
+                return
             def _cancel():
                 if cancel_check and cancel_check():
                     return True
                 return RUNNING_SYNCS.get(table_name, {}).get("cancel", False)
-            RUNNING_SYNCS[table_name] = {"running": True, "cancel": False}
             try:
                 self._sync_table(table_name, cfg, mode, max_pages, _cancel)
             finally:
-                RUNNING_SYNCS.pop(table_name, None)
+                self._release(table_name)
         else:
+            stale_cutoff = None
+            if stale_days is not None:
+                stale_cutoff = date.today() - timedelta(days=stale_days)
             sorted_tasks = sorted(
                 DATA_SYNC_TASKS.items(),
                 key=lambda x: x[1].get("priority", 99),
@@ -56,7 +78,12 @@ class SyncEngine:
             for name, cfg in sorted_tasks:
                 if not cfg.get("enabled", True):
                     continue
-                RUNNING_SYNCS[name] = {"running": True, "cancel": False}
+                if stale_cutoff is not None and not self._is_stale(name, stale_cutoff):
+                    logger.info(f"Catch-up skip {name}: checkpoint is fresh")
+                    continue
+                if not self._acquire(name):
+                    logger.warning(f"{name}: sync already running, skip")
+                    continue
                 try:
                     def _cancel(n=name):
                         if cancel_check and cancel_check():
@@ -66,7 +93,27 @@ class SyncEngine:
                 except Exception as e:
                     logger.error(f"Sync failed for {name}: {e}")
                 finally:
-                    RUNNING_SYNCS.pop(name, None)
+                    self._release(name)
+
+    def _is_stale(self, table_name: str, cutoff: date) -> bool:
+        try:
+            cp = self._get_checkpoint(table_name)
+        except Exception as e:
+            logger.warning(f"{table_name}: checkpoint lookup failed ({e}), treat as stale")
+            cp = None
+        if cp is None:
+            session = SessionLocal()
+            try:
+                last_ok = (
+                    session.query(func.max(SyncLog.start_time))
+                    .filter(SyncLog.table_name == table_name, SyncLog.status == "completed")
+                    .scalar()
+                )
+            finally:
+                session.close()
+            if last_ok:
+                cp = last_ok.date() if isinstance(last_ok, datetime) else last_ok
+        return cp is None or cp < cutoff
 
     def _sync_table(self, table_name: str, cfg: dict, mode_override: str = None, max_pages_override: int = None, cancel_check=None):
         actual_mode = mode_override or cfg.get("mode", "once")
@@ -191,6 +238,7 @@ class SyncEngine:
             return 0, None, None
 
         total_rows = 0
+        first_failure = None
         date_field = cfg.get("date_field", "trade_date")
         api_name = cfg["api"]
         fields_str = ",".join(cfg["fields"].keys())
@@ -233,9 +281,21 @@ class SyncEngine:
                 logger.info(f"{table_name} {td_str} done ({total_rows} rows so far)")
 
             except Exception as e:
+                if "cancel" in str(e).lower():
+                    raise
                 logger.error(f"{table_name} {td_str} failed: {e}")
                 if total_rows == 0:
                     raise
+                if first_failure is None:
+                    first_failure = td
+
+        if first_failure is not None:
+            rollback = first_failure - timedelta(days=1)
+            self._update_checkpoint(table_name, rollback)
+            raise Exception(
+                f"sync incomplete: {table_name} failed at {first_failure}, "
+                f"checkpoint rolled back to {rollback} for retry next run"
+            )
 
         return total_rows, first_date, last_date
 
@@ -262,13 +322,25 @@ class SyncEngine:
         api_name = cfg["api"]
         fields_str = ",".join(cfg["fields"].keys())
         total_rows = 0
+        failed_codes = 0
+
+        overlap_days = int(cfg.get("sync_overlap_days", 3))
+        cp = self._get_checkpoint(table_name)
+        start_date = None
+        if cp:
+            start_date = (cp - timedelta(days=overlap_days)).strftime("%Y%m%d")
+        if start_date:
+            logger.info(f"{table_name}: by-code incremental from start_date={start_date} (checkpoint={cp})")
 
         for i, ts_code in enumerate(stocks):
             if cancel_check and cancel_check():
                 logger.info(f"{table_name}: sync cancelled at {ts_code}")
                 raise Exception(f"sync cancelled at {ts_code}")
             try:
-                data = self.client.call(api_name, **{code_field: ts_code}, fields=fields_str)
+                kwargs = {code_field: ts_code}
+                if start_date:
+                    kwargs["start_date"] = start_date
+                data = self.client.call(api_name, **kwargs, fields=fields_str)
                 if data is not None and not data.empty:
                     data = _convert_dates(data, cfg)
                     self._write_df(table_name, data, cfg)
@@ -278,9 +350,16 @@ class SyncEngine:
                     logger.info(f"{table_name}: {i+1}/{len(stocks)} done ({total_rows} rows so far)")
 
             except Exception as e:
+                failed_codes += 1
                 logger.error(f"{table_name} {ts_code} failed: {e}")
 
-        self._update_checkpoint(table_name, date.today())
+        if failed_codes:
+            logger.warning(
+                f"{table_name}: {failed_codes}/{len(stocks)} codes failed, "
+                f"checkpoint kept at {cp} for retry next run"
+            )
+        else:
+            self._update_checkpoint(table_name, date.today())
         logger.info(f"{table_name}: completed {len(stocks)} codes, {total_rows} total rows")
         return total_rows, date.today(), date.today()
 
@@ -303,57 +382,9 @@ class SyncEngine:
 
         pk_cols = [k for k, v in cfg.get("fields", {}).items() if len(v) >= 3 and v[2] is True]
 
-        temp_table = f"_tmp_{table_name}"
-        df.to_sql(temp_table, engine, if_exists="replace", index=False)
-
-        with engine.connect() as conn:
-            from sqlalchemy import text
-            col_types = {}
-            for row in conn.execute(
-                text(
-                    "SELECT column_name, data_type FROM information_schema.columns "
-                    "WHERE table_name = :tbl ORDER BY ordinal_position"
-                ),
-                {"tbl": table_name},
-            ).fetchall():
-                col_types[row[0]] = row[1]
-
-        all_cols = [c for c in df.columns if c in col_types]
-
-        if not all_cols:
-            with engine.connect() as conn:
-                from sqlalchemy import text
-                conn.execute(text(f"DROP TABLE IF EXISTS {temp_table}"))
-                conn.commit()
-            return
-
-        select_cols = []
-        for c in all_cols:
-            pg_type = col_types[c]
-            if pg_type in ("double precision", "numeric", "real", "integer", "bigint", "smallint"):
-                select_cols.append(f"CAST({c} AS {pg_type})")
-            else:
-                select_cols.append(c)
-
-        set_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in all_cols if c not in pk_cols)
-
-        if pk_cols:
-            distinct_cols = ", ".join(pk_cols)
-            order_cols = [c for c in ("f_ann_date", "ann_date", "report_type") if c in all_cols]
-            order_by = ", ".join(order_cols + [distinct_cols]) if order_cols else distinct_cols
-            select_from = f"(SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY {distinct_cols} ORDER BY {order_by}) AS _rn FROM {temp_table}) _ranked WHERE _rn = 1) _dedup"
-        else:
-            select_from = temp_table
-
-        insert_sql = f"INSERT INTO {table_name} ({', '.join(all_cols)}) SELECT {', '.join(select_cols)} FROM {select_from}"
-        if set_clause and pk_cols:
-            insert_sql += f" ON CONFLICT ({', '.join(pk_cols)}) DO UPDATE SET {set_clause}"
-
-        with engine.connect() as conn:
-            from sqlalchemy import text
-            conn.execute(text(insert_sql))
-            conn.execute(text(f"DROP TABLE IF EXISTS {temp_table}"))
-            conn.commit()
+        # COPY 化批量写入（MINUTE_DATA_PLAN.md 5.3，日线/分钟共用）
+        from data.sync.bulk_writer import copy_upsert_df
+        copy_upsert_df(table_name, df, pk_cols=pk_cols)
 
     def _get_checkpoint(self, table_name: str) -> date:
         session = SessionLocal()

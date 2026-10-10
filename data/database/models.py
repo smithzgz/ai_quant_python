@@ -257,6 +257,30 @@ class SyncCheckpoint(Base):
     updated_at = Column(DateTime(timezone=True), default=_now)
 
 
+class SyncCodeCheckpoint(Base):
+    """按股票断点表：分钟级数据按股票回填/续采的进度（见 MINUTE_DATA_PLAN.md 4.4）"""
+    __tablename__ = "sync_code_checkpoint"
+
+    table_name = Column(String(100), primary_key=True)
+    ts_code = Column(String(20), primary_key=True)
+    last_sync_time = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_now)
+
+
+class StkMins5min(Base):
+    """5分钟K线（baostock，bar 起始时刻，vol 单位股）— TimescaleDB hypertable"""
+    __tablename__ = "stk_mins_5min"
+
+    ts_code = Column(String(20), primary_key=True)
+    trade_time = Column(DateTime(timezone=True), primary_key=True)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    vol = Column(Float)
+    amount = Column(Float)
+
+
 class DataQualityLog(Base):
     __tablename__ = "data_quality_log"
 

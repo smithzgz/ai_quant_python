@@ -149,9 +149,12 @@ DATA_SYNC_TASKS = {
 
 | 文件 | 用途 | 关联 |
 |------|------|------|
-| `engine.py` | **核心同步引擎**（356行），实现增量/全量同步、断点续传、数据写入 | 依赖 `tushare_client.py`、`config/data_sync_config.py` |
+| `engine.py` | **核心同步引擎**，实现增量/全量同步、断点续传；`_write_df` 委托 `bulk_writer.py`（COPY 化写入） | 依赖 `tushare_client.py`、`config/data_sync_config.py` |
 | `tushare_client.py` | Tushare API封装，含重试机制（指数退避）和速率限制（0.35s/次） | 被 `engine.py` 调用 |
 | `scheduler.py` | APScheduler定时调度器，按cron表达式触发同步任务 | 依赖 `engine.py` |
+| `bulk_writer.py` | COPY 化批量写入（临时表 + COPY FROM STDIN + 去重 upsert），列类型进程级缓存；单批5万行 ≤2s | 被 `engine.py`、`minute_sync.py` 共用 |
+| `minute_sync.py` | 5分钟线同步（baostock 数据源）：per-code checkpoint 续采、空响应推进断点、advisory lock 互斥；入口 `sync_nightly()`（engine.sync_func）/ `sync_codes()`（回填器） | 见 `MINUTE_DATA_PLAN.md` |
+| `rate_limiter.py` | 通用令牌桶限流器（线程安全，rate=0 直通） | 被 `minute_sync.py` 使用 |
 
 **`engine.py` 核心流程：**
 
@@ -161,24 +164,22 @@ sync(table_name, mode)
         ├── mode="once"      → _sync_once()      # 单次全量（如trade_cal）
         ├── mode="incremental" → _sync_incremental() # 增量同步（如daily）
         ├── mode="full"      → _sync_full()       # 全量重刷
-        └── api_date_type="code" → _sync_by_code()  # 按股票代码循环（如财务报表）
+        ├── api_date_type="code" → _sync_by_code()  # 按股票代码循环（如财务报表）
+        └── sync_func=xxx    → _sync_custom()    # 自定义同步函数（如 fx_daily、stk_mins_5min）
 
 _sync_incremental():
   1. _get_checkpoint() → 获取上次同步断点
   2. _get_trade_dates(since) → 从trade_cal获取待同步日期
   3. 遍历每个日期：
      ├── tushare_client.call(api, date=xxx) → 获取数据
-     ├── _write_df() → 写入数据库（UPSERT）
+     ├── _write_df() → 写入数据库（UPSERT，委托 bulk_writer）
      └── _update_checkpoint() → 更新断点
 ```
 
-**`_write_df()` 写入逻辑：**
+**`bulk_writer.copy_upsert_df()` 写入逻辑（COPY 化）：**
 ```
-1. 创建临时表 _tmp_{table_name}
-2. DataFrame → 临时表
-3. 查询目标表列类型，过滤匹配列
-4. 构建 INSERT ... ON CONFLICT DO UPDATE（UPSERT）
-5. 删除临时表
+1. 列类型按表名进程级缓存（首次查 information_schema）
+2. 每批: TRUNCATE 临时表 → COPY csv FROM STDIN → INSERT..SELECT(ROW_NUMBER去重+CAST) ON CONFLICT DO UPDATE
 ```
 
 ### 5. `data/quality/` - 数据质量模块
@@ -189,6 +190,7 @@ _sync_incremental():
 | `checker.py` | 质量检查执行器，按规则检查数据并记录到 `DataQualityLog` | 依赖 `rules.py` |
 | `reporter.py` | 质量报告生成器，查询最近7天的质量统计 | 依赖 `checker.py` |
 | `sync_verifier.py` | 同步后验证：随机抽样日期，重新从Tushare获取，对比本地数据 | 被 `engine.py` 在同步后调用 |
+| `minute_rules.py` | 分钟级质检（SQL 聚合下推，禁行拉取）：bar数/日=48±2、OHLC逻辑、日内缺口、可疑零成交 | 针对 `stk_mins_5min` |
 
 ### 6. `backtest/` - 回测引擎
 
@@ -197,9 +199,10 @@ _sync_incremental():
 | **broker/** | | |
 | `a_share.py` | A股券商模拟：佣金万三、印花税千一（卖出）、100股手数限制 | 被 `vbt_engine.py` 使用 |
 | **engine/** | | |
-| `vbt_engine.py` | **核心回测引擎**，编排数据加载→信号生成→组合模拟→结果持久化 | 依赖所有子模块 |
+| `vbt_engine.py` | **核心回测引擎**，编排数据加载→信号生成→组合模拟→结果持久化（`freq` 参数化，默认 1D） | 依赖所有子模块 |
 | `data_loader.py` | 从PostgreSQL加载OHLCV+基本面+复权因子到pandas | 依赖 `database/connection.py` |
 | `result_extractor.py` | 从VectorBT Portfolio对象提取收益、回撤、夏普等指标 | 被 `vbt_engine.py` 调用 |
+| `execution_sim.py` | A股执行级模拟器（5min 精度）：预计算订单流 + `from_orders`，含 T+1/整手/涨跌停可成交性 | 见 `MINUTE_DATA_PLAN.md` §7.2 |
 | **strategies/** | | |
 | `base.py` | 抽象策略基类 `StrategyBase`，定义 `generate_signals()` 接口 | 被所有策略继承 |
 | `macd.py` | MACD策略：MACD/信号线金叉买入，死叉卖出 | 继承 `base.py` |
@@ -289,6 +292,8 @@ Panel 7-12: Stats             (stat)        - 最新价/涨跌幅/成交量/成�
 | `run_sync.py` | CLI同步：同步单表/全部表 |
 | `run_full_sync.py` | 全量重刷：重置断点到1991年，顺序同步所有表 |
 | `migrate_adjusted_views.py` | 迁移/校验 daily_qfq、daily_hfq 复权视图（`--verify` 只读校验） |
+| `create_minute_tables.py` | M1 分钟存储建表：stk_mins_5min hypertable(30d chunk) + stk_mins_1day cagg + sync_code_checkpoint，压缩仅声明不挂策略（`--verify` 自校验） |
+| `backfill_mins.py` | M3 分钟回填器：`--codes/--universe hs300 --start --end` 单线程断点续传；`--status` 进度；`--finalize` 回填收尾（逐块压缩+挂策略+按月刷cagg） |
 | `recover_pre2003_daily.py` | 恢复2003年以前缺失的日线数据 |
 | `run_backtest_all.py` | 全量历史回测：选前50只股票，运行所有策略 |
 | `check_*.py` | 各类数据检查脚本（状态/类型/schema/覆盖度） |
