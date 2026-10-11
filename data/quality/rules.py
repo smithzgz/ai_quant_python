@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
+from datetime import date, timedelta
 from sqlalchemy import text
 from data.database.connection import engine
 from utils.logger import get_logger
@@ -75,7 +76,7 @@ QUALITY_RULES = {
 }
 
 
-def check_no_null_price(df, rule_cfg):
+def check_no_null_price(df, rule_cfg, **kwargs):
     issues = []
     for col in rule_cfg["check_cols"]:
         if col in df.columns:
@@ -85,7 +86,7 @@ def check_no_null_price(df, rule_cfg):
     return issues
 
 
-def check_positive_volume(df, rule_cfg):
+def check_positive_volume(df, rule_cfg, **kwargs):
     issues = []
     for col in rule_cfg["check_cols"]:
         if col in df.columns:
@@ -95,7 +96,7 @@ def check_positive_volume(df, rule_cfg):
     return issues
 
 
-def check_reasonable_change(df, rule_cfg):
+def check_reasonable_change(df, rule_cfg, **kwargs):
     issues = []
     for col in rule_cfg["check_cols"]:
         if col in df.columns:
@@ -105,7 +106,7 @@ def check_reasonable_change(df, rule_cfg):
     return issues
 
 
-def check_price_consistency(df, rule_cfg):
+def check_price_consistency(df, rule_cfg, **kwargs):
     issues = []
     required = ["high", "low", "open", "close"]
     if all(c in df.columns for c in required):
@@ -119,29 +120,28 @@ def check_price_consistency(df, rule_cfg):
     return issues
 
 
-def check_no_missing_dates(df, rule_cfg, table_name: str = None, check_date=None):
+def check_no_missing_dates(df, rule_cfg, table_name: str = None, check_date=None, **kwargs):
     issues = []
     if "trade_date" not in df.columns:
         return issues
 
+    # 使用 check_date 作为结束日期，向前看 30 天
+    end_date = check_date or date.today()
+    start_date = end_date - timedelta(days=30)
+
     with engine.connect() as conn:
-        if check_date:
-            result = conn.execute(
-                text("SELECT COUNT(*) FROM trade_cal WHERE is_open = 1 AND cal_date <= :d"),
-                {"d": check_date},
-            ).scalar()
-        else:
-            result = conn.execute(
-                text("SELECT COUNT(*) FROM trade_cal WHERE is_open = 1")
-            ).scalar()
+        result = conn.execute(
+            text("SELECT COUNT(*) FROM trade_cal WHERE is_open = 1 AND cal_date BETWEEN :s AND :e"),
+            {"s": start_date, "e": end_date},
+        ).scalar()
 
         actual = df["trade_date"].nunique() if not df.empty else 0
         if result and actual < result * 0.9:
-            issues.append(f"Only {actual}/{result} trade dates found (< 90%)")
+            issues.append(f"Only {actual}/{result} trade dates found in range ({start_date} to {end_date}) (< 90%)")
     return issues
 
 
-def check_adj_factor_positive(df, rule_cfg):
+def check_adj_factor_positive(df, rule_cfg, **kwargs):
     issues = []
     if "adj_factor" in df.columns:
         bad = (df["adj_factor"] <= 0).sum()
@@ -150,7 +150,7 @@ def check_adj_factor_positive(df, rule_cfg):
     return issues
 
 
-def check_reasonable_pe(df, rule_cfg):
+def check_reasonable_pe(df, rule_cfg, **kwargs):
     issues = []
     for col in rule_cfg["check_cols"]:
         if col in df.columns:
@@ -160,7 +160,7 @@ def check_reasonable_pe(df, rule_cfg):
     return issues
 
 
-def check_valid_rating(df, rule_cfg):
+def check_valid_rating(df, rule_cfg, **kwargs):
     issues = []
     for col in rule_cfg["check_cols"]:
         if col in df.columns:
@@ -171,7 +171,7 @@ def check_valid_rating(df, rule_cfg):
     return issues
 
 
-def check_target_price合理性(df, rule_cfg):
+def check_target_price合理性(df, rule_cfg, **kwargs):
     issues = []
     if "target_pricehigh" in df.columns and "target_pricelow" in df.columns:
         valid = df[(df["target_pricehigh"].notna()) & (df["target_pricelow"].notna())]
@@ -181,7 +181,7 @@ def check_target_price合理性(df, rule_cfg):
     return issues
 
 
-def check_bond_par_value(df, rule_cfg):
+def check_bond_par_value(df, rule_cfg, **kwargs):
     issues = []
     if "par_value" in df.columns:
         bad = (df["par_value"] <= 0).sum()
@@ -190,7 +190,7 @@ def check_bond_par_value(df, rule_cfg):
     return issues
 
 
-def check_bond_coupon_rate(df, rule_cfg):
+def check_bond_coupon_rate(df, rule_cfg, **kwargs):
     issues = []
     if "coupon_rate" in df.columns:
         extreme = (df["coupon_rate"].abs() > rule_cfg["threshold"]).sum()

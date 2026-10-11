@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_MISSED
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 from data.sync.engine import SyncEngine
 from config.data_sync_config import DATA_SYNC_TASKS
 from utils.logger import get_logger
@@ -57,6 +59,16 @@ def create_scheduler() -> BlockingScheduler:
                 misfire_grace_time=3600,
             )
             logger.info(f"Scheduled: sync_{table_name} ({schedule})")
+
+    scheduler.add_job(
+        engine.sync,
+        trigger=DateTrigger(run_date=datetime.now() + timedelta(seconds=90)),
+        kwargs={"stale_days": 2},
+        id="sync_startup_catchup",
+        name="启动补同步(仅过期表)",
+        misfire_grace_time=300,
+    )
+    logger.info("Scheduled: sync_startup_catchup (once, 90s after startup, stale tables only)")
 
     return scheduler
 
