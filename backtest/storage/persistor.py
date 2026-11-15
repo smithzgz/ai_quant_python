@@ -123,13 +123,22 @@ class BacktestPersistor:
             exit_price = row.get("Avg Exit Price")
             exit_price = float(exit_price) if pd.notna(exit_price) else None
 
+            # vbt 对未平仓交易会把 Exit Timestamp 填成最后一根 bar、PnL 填为浮盈。
+            # 若不区分 open/closed，浮盈会被误当成已实现盈亏，导致胜率/盈亏比虚高。
+            raw_status = str(row.get("Status") or "").strip().lower()
+            is_open = raw_status.startswith("open") or (
+                not raw_status and pd.isna(row.get("Exit Timestamp"))
+            )
+            status = "open" if is_open else "closed"
+
             records.append(TradeRecord(
                 run_id=run_id,
                 trade_idx=idx,
                 symbol=symbol,
                 direction=direction,
                 entry_time=entry_time,
-                exit_time=exit_time,
+                # 未平仓没有真实出场时间，vbt 填的是最后一根 bar，落库置空避免误导
+                exit_time=None if is_open else exit_time,
                 entry_price=float(row.get("Avg Entry Price") or 0),
                 exit_price=exit_price,
                 size=float(row.get("Size") or 0),
@@ -137,6 +146,7 @@ class BacktestPersistor:
                 return_pct=ret * 100.0 if ret is not None else None,
                 fees=fees,
                 duration_bars=None,
+                status=status,
             ))
 
         session.bulk_save_objects(records)

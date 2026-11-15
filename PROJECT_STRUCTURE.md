@@ -197,7 +197,7 @@ _sync_incremental():
 | 文件 | 用途 | 关联 |
 |------|------|------|
 | **broker/** | | |
-| `a_share.py` | A股券商模拟：佣金万三、印花税千一（卖出）、100股手数限制 | 被 `vbt_engine.py` 使用 |
+| `a_share.py` | A股成本模型：佣金万三(单笔最低5元)、印花税千一(**仅卖出**)、过户费十万分之一、100股整手；`build_fees_array()` 生成买卖分边费率矩阵供 vectorbt 使用（修复旧版漏算卖出印花税） | 被 `vbt_engine.py`、`execution_sim.py` 使用 |
 | **engine/** | | |
 | `vbt_engine.py` | **核心回测引擎**，编排数据加载→信号生成→组合模拟→结果持久化（`freq` 参数化，默认 1D） | 依赖所有子模块 |
 | `data_loader.py` | 从PostgreSQL加载OHLCV+基本面+复权因子到pandas | 依赖 `database/connection.py` |
@@ -210,9 +210,9 @@ _sync_incremental():
 | `momentum.py` | 动量策略：买入N日涨幅前K的股票，排名下降卖出 | 继承 `base.py` |
 | `registry.py` | 策略注册表，装饰器自动发现和注册策略 | 被 `vbt_engine.py` 使用 |
 | **performance/** | | |
-| `metrics.py` | 绩效指标计算：总收益、年化收益、最大回撤、夏普/索提诺/卡尔马比率 | 被 `result_extractor.py` 使用 |
+| `metrics.py` | 绩效指标：`calc_metrics()` 基础6指标；**`calc_full_metrics()`** 完整5组（收益/风险/风险调整/相对基准/交易），含 Alpha/Beta/信息比率/跟踪误差/VaR/CVaR/Omega/未平仓浮盈。交易统计**只算已平仓** | 被 `result_extractor.py`、`scripts/gen_backtest_report.py` 使用 |
 | **storage/** | | |
-| `persistor.py` | 回测结果持久化：保存运行记录、交易、净值曲线到PostgreSQL | 依赖 `database/connection.py` |
+| `persistor.py` | 回测结果持久化：保存运行记录、交易、净值曲线到PostgreSQL。**按 vbt `Status` 列区分 open/closed**，未平仓的 `exit_time` 置空（vbt 会把未平仓的 Exit Timestamp 填成最后一根 bar、PnL 记浮盈，不区分会虚高胜率/盈亏比） | 依赖 `database/connection.py` |
 | `queries.py` | 命名SQL查询：回测汇总、净值曲线、交易列表、月度收益等 | 被 `backtest_api.py` 使用 |
 
 **回测数据流：**
@@ -296,6 +296,9 @@ Panel 7-12: Stats             (stat)        - 最新价/涨跌幅/成交量/成�
 | `backfill_mins.py` | M3 分钟回填器：`--codes/--universe hs300 --start --end` 单线程断点续传；`--status` 进度；`--finalize` 回填收尾（逐块压缩+挂策略+按月刷cagg） |
 | `recover_pre2003_daily.py` | 恢复2003年以前缺失的日线数据 |
 | `run_backtest_all.py` | 全量历史回测：选前50只股票，运行所有策略 |
+| `run_fee_impact_backtest.py` | 费用模型影响回测：同一数据下对比"旧单一比例费(漏印花税)"与"A股分边精确成本"，产出 `results/fee_impact.json` | 依赖 `backtest/engine/vbt_engine.py` |
+| `gen_backtest_report.py` | 回测报告生成：常规指标(5组) + **逐笔交易明细** + 净值/回撤/月度热力图/收益分布/盈亏归因图(plotly) + qlib 交叉校验 → `results/backtest_report.html`；同时落盘 `results/trades_run*.csv`、`trades_all.csv`、`metrics.json` | 依赖 `plotly`、`pyqlib` |
+| `analyze_trade_quality.py` | **逐笔交易合理性质检**：10 项检查（pnl自洽/费用合规/成交价真实性/整手/T+1/涨跌停/流动性/持有期/**开仓日逻辑自检**/**仓位控制**）+ accumulate 加仓杠杆贡献对比 → `results/trade_quality_report.html`、`trade_quality.json` | 依赖 `daily` 真实日线 |
 | `check_*.py` | 各类数据检查脚本（状态/类型/schema/覆盖度） |
 | `verify_adjusted.py` | 验证复权数据正确性 |
 
@@ -461,3 +464,38 @@ web/api/*.py ←── admin.html (前端调用)
 ---
 
 *Generated: 2026-06-19*
+
+## 已知回测缺陷清单（由 `scripts/analyze_trade_quality.py` 检出）
+
+| # | 问题 | 严重度 | 现状 |
+|---|---|---|---|
+| 1 | `from_signals(accumulate=True)` 每次信号都新增仓位，单只累计买入达等权额度 8~35 倍 | **严重** | **已修复(2026-10-26)**：改 `accumulate=False`，每只标的任意时刻仅 1 个仓位；质检显示重叠持仓标的数=0 |
+| 2 | vbt 的 `Entry Timestamp` 是持仓创建时间，非该笔真实成交日（同日多价可证） | **严重** | **已修复(2026-10-26)**：随 `accumulate=False` 一并消失，自检同日多价组数=0，成交时间与买入信号 100% 吻合 |
+| 3 | `size_type='value'` 产生 100% 零股（如 1,421.06 股） | **高** | **已修复(2026-10-26)**：改 `size_type='amount'`（整百股），全部为 100 整数倍 |
+| 4 | 回测价是前复权价，与真实成交价偏离>5% 约占 1/5 | **高** | 架构不变量，金额口径失真（收益率%不受影响）；如需真实金额需用未复权价重算 |
+| 5 | ~22% 订单因资金不足被 vbt 自动缩减 | 中 | 未改：仓位具不确定性 |
+| 6 | ~7.5% 的买卖落在涨跌停/一字板 | 中 | 未建模：实盘可能无法成交 |
+| 7 | 费用按代表性单笔金额折算，最低佣金触发时有 ~0.26% 偏差 | 低 | 已知近似 |
+
+---
+
+## 样本外(OOS)回测：消除标的池前视偏差（2026-10-26 新增）
+
+原 `scripts/run_fee_impact_backtest.py` 的 universe 用"窗口内成交额 TopN"选股，存在前视选择偏差。新增两套脚本做 OOS：
+
+- `scripts/run_oos_backtest.py`：用"窗口开始日即可知"的标的池重跑三策略（精确成本）。
+  - `hs300`：沪深300成分（截至 2022-12-30，point-in-time，经 Tushare `index_weight` 拉取并落盘 `data/hs300_asof_20221230.json`）。
+  - `liq_pt20`：起点前 200 日平均成交额 Top20（与 IS 同选股标准、无前视，用于隔离纯前视偏差）。
+- `scripts/gen_oos_report.py`：生成 `results/oos_report.html` + `results/oos_metrics.json` + 各 OOS run 逐笔 CSV。
+- 成分数据：`data/hs300_asof_20221230.json`（离线可复现，无需每次联网）。
+
+### OOS 关键结论（精确成本，100万，2023-01-01~2025-12-31）
+| 策略 | IS-top20(前视) | OOS-流动性Top20 | OOS-沪深300 | 沪深300基准 |
+|---|---|---|---|---|
+| ma_cross | 126.45% | 21.56% | 3.54% | 19.09% |
+| macd | 81.97% | 0.56% | 5.29% | 19.09% |
+| momentum | 87.06% | 8.57% | -1.06% | 19.09% |
+
+前视偏差虚增收益约 78~105 个百分点；去前视后三策略基本跑不赢沪深300。沪深300口径因 300 只对 100 万本金资本过散（高价股 size=0），绝对值不宜直接对比流动性Top20。
+
+*Updated: 2026-10-26*

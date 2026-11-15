@@ -12,3 +12,8 @@ pydantic>=2.0.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 baostock>=0.9.4
+# 回测报告与统计（scripts/gen_backtest_report.py）
+plotly>=5.0.0
+pyqlib>=0.9.0
+# 单元测试
+pytest>=8.0.0
